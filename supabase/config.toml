@@ -1,0 +1,13 @@
+# Used by the Supabase CLI (the GitHub Action deploys the Edge Functions).
+project_id = "paradise-city-rooms"
+
+# The functions check the signed-in user themselves (or, for auth-email,
+# the webhook signature), so the gateway JWT check is switched off.
+[functions.notify]
+verify_jwt = false
+
+[functions.admin-users]
+verify_jwt = false
+
+[functions.auth-email]
+verify_jwt = false
