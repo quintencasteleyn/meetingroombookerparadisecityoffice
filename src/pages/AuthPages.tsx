@@ -8,8 +8,20 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { supabase } from '../lib/supabase'
 
-export const ALLOWED_DOMAIN = 'paradisecity.be'
+export const ALLOWED_DOMAINS = ['paradisecity.be', 'touquetmusicbeach.com']
+export const ALLOWED_DOMAINS_TEXT = ALLOWED_DOMAINS.map((d) => `@${d}`).join(' or ')
 const MIN_PASSWORD = 8
+
+function isAllowedEmail(email: string): boolean {
+  return ALLOWED_DOMAINS.some((d) => email.endsWith(`@${d}`))
+}
+
+/** True once the part after @ clearly isn't one of ours (not while still typing it). */
+function isWrongDomain(email: string): boolean {
+  const domain = email.split('@')[1]
+  if (!domain || !domain.includes('.')) return false
+  return !ALLOWED_DOMAINS.some((d) => d.startsWith(domain))
+}
 
 function redirectBase(): string {
   return `${window.location.origin}${window.location.pathname}`
@@ -17,11 +29,14 @@ function redirectBase(): string {
 
 function authMessage(message: string): string {
   const m = message.toLowerCase()
+  if (m.includes('failed to fetch')) return 'Could not reach the server. Check your internet connection and try again.'
+  if (m.includes('secret api key'))
+    return 'The website is set up with the wrong Supabase key (the secret key instead of the publishable key). Please tell the admin.'
   if (m.includes('invalid login credentials')) return 'Wrong email or password.'
   if (m.includes('email not confirmed')) return 'Please confirm your email address first. Check your inbox (and spam folder).'
   if (m.includes('banned')) return 'Your account has been blocked. Please contact the admin.'
   if (m.includes('database error saving new user') || m.includes('only @'))
-    return `Only @${ALLOWED_DOMAIN} email addresses can create an account.`
+    return `Only ${ALLOWED_DOMAINS_TEXT} email addresses can create an account.`
   if (m.includes('rate limit') || m.includes('security purposes'))
     return 'Too many attempts. Please wait a minute and try again.'
   if (m.includes('password should be')) return `Choose a stronger password (at least ${MIN_PASSWORD} characters).`
@@ -125,7 +140,7 @@ export function LoginPage() {
               className={inputClass}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder={`name@${ALLOWED_DOMAIN}`}
+              placeholder={`name@${ALLOWED_DOMAINS[0]}`}
               autoComplete="email"
               required
             />
@@ -173,14 +188,13 @@ export function SignupPage() {
   const [sentTo, setSentTo] = useState<string | null>(null)
 
   const cleanEmail = email.trim().toLowerCase()
-  const wrongDomain = cleanEmail.includes('@') && !cleanEmail.endsWith(`@${ALLOWED_DOMAIN}`)
+  const wrongDomain = isWrongDomain(cleanEmail)
 
   async function submit(e: FormEvent) {
     e.preventDefault()
     setError(null)
     if (!fullName.trim()) return setError('Please enter your name.')
-    if (wrongDomain || !cleanEmail.endsWith(`@${ALLOWED_DOMAIN}`))
-      return setError(`Please use your @${ALLOWED_DOMAIN} email address.`)
+    if (!isAllowedEmail(cleanEmail)) return setError(`Please use your ${ALLOWED_DOMAINS_TEXT} email address.`)
     if (password.length < MIN_PASSWORD) return setError(`Your password needs at least ${MIN_PASSWORD} characters.`)
     if (password !== confirm) return setError("The passwords don't match.")
 
@@ -219,7 +233,7 @@ export function SignupPage() {
   }
 
   return (
-    <AuthLayout title="Create your account" subtitle={`For colleagues with a @${ALLOWED_DOMAIN} email address.`}>
+    <AuthLayout title="Create your account" subtitle={`For colleagues with a ${ALLOWED_DOMAINS_TEXT} email address.`}>
       <form onSubmit={submit} className="space-y-4">
         <Field label="Full name">
           {(id) => (
@@ -235,7 +249,7 @@ export function SignupPage() {
             />
           )}
         </Field>
-        <Field label="Work email" error={wrongDomain ? `Use your @${ALLOWED_DOMAIN} address.` : null}>
+        <Field label="Work email" error={wrongDomain ? `Use your ${ALLOWED_DOMAINS_TEXT} address.` : null}>
           {(id) => (
             <input
               id={id}
@@ -243,7 +257,7 @@ export function SignupPage() {
               className={inputClass}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder={`name@${ALLOWED_DOMAIN}`}
+              placeholder={`name@${ALLOWED_DOMAINS[0]}`}
               autoComplete="email"
               required
             />
@@ -313,7 +327,7 @@ export function ForgotPasswordPage() {
                 className={inputClass}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={`name@${ALLOWED_DOMAIN}`}
+                placeholder={`name@${ALLOWED_DOMAINS[0]}`}
                 autoComplete="email"
                 required
               />

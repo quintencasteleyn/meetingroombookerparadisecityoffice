@@ -8,6 +8,7 @@ import { callFunction, friendlyError, supabase } from '../lib/supabase'
 import { useRooms } from '../lib/hooks'
 import type { Role, Room } from '../lib/types'
 import { appLink } from '../lib/mailto'
+import { ALLOWED_DOMAINS_TEXT } from './AuthPages'
 
 interface AdminUser {
   id: string
@@ -68,7 +69,7 @@ export default function AdminPage() {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">Invite colleagues</p>
           <p className="truncate text-xs text-muted">
-            Share this link. Anyone with a @paradisecity.be address can create an account.
+            Share this link. Anyone with a {ALLOWED_DOMAINS_TEXT} address can create an account.
           </p>
         </div>
         <code className="truncate rounded-lg bg-surface-2 px-3 py-2 text-xs">{signupLink}</code>

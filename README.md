@@ -4,7 +4,7 @@ Book the three meeting rooms at the Paradise City office in a Google-Calendar-li
 
 **What colleagues can do**
 
-- Create an account with their **@paradisecity.be** address (with email confirmation) and reset a forgotten password by email.
+- Create an account with their **@paradisecity.be** or **@touquetmusicbeach.com** address (with email confirmation) and reset a forgotten password by email.
 - See the **current week** (Monday–Sunday, 07:00–20:00) right away, then browse with ◀ ▶ and jump back with **Today**.
 - Filter with the dropdown: **All rooms** side by side, or one room at a time.
 - **Click or drag** in the calendar to book a slot, in 15-minute steps up to a full day, at most 3 months ahead.
@@ -47,6 +47,8 @@ You need to be an admin in GitHub, Supabase and Microsoft 365 (Entra ID). Do the
 3. Click **Run**. You should see *Success. No rows returned*.
 
 This creates the three rooms (Room 1 (MKT side) · 6 people, Room 2 (Middle) · 10, Room 3 (big screen) · 8) and all the rules.
+
+Then run the other files in `supabase/migrations/` the same way, in date order (each one once). For example, `20261006000000_second_email_domain.sql` also allows `@touquetmusicbeach.com` addresses.
 
 ### 3. Connect the website and publish it on GitHub Pages
 
@@ -124,7 +126,7 @@ From now on, Supabase sends confirmation and password-reset emails through your 
 
 | Rule | Value |
 |---|---|
-| Who can sign up | Only `@paradisecity.be` addresses |
+| Who can sign up | Only `@paradisecity.be` and `@touquetmusicbeach.com` addresses |
 | Opening hours | 07:00–20:00, every day incl. weekends (Brussels time) |
 | Booking length | 15 minutes up to the full day, in 15-minute steps |
 | How far ahead | 3 months |
@@ -139,7 +141,7 @@ From now on, Supabase sends confirmation and password-reset emails through your 
 |---|---|
 | Room names, capacity, colours | In the app: **Admin → Rooms** |
 | Admins | In the app: **Admin → Users → Make admin** |
-| Allowed email domain / first admin | `handle_new_user()` in the SQL file, and `ALLOWED_DOMAIN` in `src/pages/AuthPages.tsx` |
+| Allowed email domains / first admin | `handle_new_user()` in the newest SQL file that defines it, and `ALLOWED_DOMAINS` in `src/pages/AuthPages.tsx` |
 | Opening hours / 3-month limit | `bookings_before_write()` in the SQL file, and `src/lib/time.ts` |
 | Colour presets | `src/lib/theme.ts` |
 
