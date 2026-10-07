@@ -10,6 +10,8 @@ export const DAY_END_HOUR = 20
 export const SLOT_MINUTES = 15
 export const SLOTS_PER_DAY = ((DAY_END_HOUR - DAY_START_HOUR) * 60) / SLOT_MINUTES
 export const MAX_MONTHS_AHEAD = 3
+/** The calendar shows and books Monday to Friday only. */
+export const WORK_DAYS = 5
 
 export function nowInBrussels(): DateTime {
   return DateTime.now().setZone(TZ)
@@ -18,6 +20,16 @@ export function nowInBrussels(): DateTime {
 /** Monday 00:00 of the week containing `dt`. */
 export function weekStartOf(dt: DateTime): DateTime {
   return dt.setZone(TZ).startOf('week')
+}
+
+export function isWeekend(dt: DateTime): boolean {
+  return dt.weekday > WORK_DAYS
+}
+
+/** The week the calendar opens on: this week, or next week on Saturday and Sunday. */
+export function currentWeekStart(): DateTime {
+  const now = nowInBrussels()
+  return weekStartOf(isWeekend(now) ? now.plus({ weeks: 1 }) : now)
 }
 
 export function lastBookableDay(): DateTime {
@@ -83,7 +95,7 @@ export function durationLabel(minutes: number): string {
 }
 
 export function weekLabel(weekStart: DateTime): string {
-  const end = weekStart.plus({ days: 6 })
+  const end = weekStart.plus({ days: WORK_DAYS - 1 })
   const sameMonth = weekStart.month === end.month
   const range = sameMonth
     ? `${weekStart.toFormat('d')} – ${end.toFormat('d LLL yyyy')}`

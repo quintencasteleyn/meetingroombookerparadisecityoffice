@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { DateTime } from 'luxon'
-import { AlertTriangle, CheckCircle2, Mail, Repeat, ArrowLeftRight, Users } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Hourglass, Mail, Repeat, ArrowLeftRight, Users } from 'lucide-react'
 import { Alert, Button, Dialog, Field, inputClass } from './ui'
 import GuestInput from './GuestInput'
 import { useAuth } from '../context/AuthContext'
@@ -16,6 +16,7 @@ import {
   fmtRange,
   fmtTime,
   fromIso,
+  isWeekend,
   lastBookableDay,
   nowInBrussels,
 } from '../lib/time'
@@ -41,7 +42,7 @@ interface Availability {
   freeRooms: Room[]
 }
 
-const FREQUENCIES: Frequency[] = ['none', 'daily', 'weekdays', 'weekly', 'biweekly', 'monthly']
+const FREQUENCIES: Frequency[] = ['none', 'weekdays', 'weekly', 'biweekly', 'monthly']
 
 function overlaps(a: Occurrence, b: Booking): boolean {
   return a.start < fromIso(b.ends_at) && a.end > fromIso(b.starts_at)
@@ -63,6 +64,7 @@ export default function BookingDialog({ onClose, onSaved, rooms, colleagues, ini
   const [until, setUntil] = useState('')
   const [scope, setScope] = useState<'single' | 'following'>('single')
   const [override, setOverride] = useState(false)
+  const [waitTaken, setWaitTaken] = useState(true)
   const [availability, setAvailability] = useState<Availability | null>(null)
   const [checking, setChecking] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -86,6 +88,7 @@ export default function BookingDialog({ onClose, onSaved, rooms, colleagues, ini
 
   const problem = (() => {
     if (!day.isValid) return 'Pick a date.'
+    if (isWeekend(day)) return 'Rooms can be booked Monday to Friday. Pick a weekday.'
     if (day < today) return "You can't book in the past."
     if (day > lastDay) return `Rooms can be booked up to ${lastDay.toFormat('d LLL yyyy')} (3 months ahead).`
     if (endTime <= startTime) return 'The end time must be after the start time.'
@@ -113,6 +116,7 @@ export default function BookingDialog({ onClose, onSaved, rooms, colleagues, ini
         .from('bookings')
         .select(BOOKING_COLUMNS)
         .is('cancelled_at', null)
+        .eq('status', 'confirmed')
         .lt('starts_at', last.toUTC().toISO()!)
         .gt('ends_at', first.toUTC().toISO()!)
       setChecking(false)
@@ -156,9 +160,25 @@ export default function BookingDialog({ onClose, onSaved, rooms, colleagues, ini
   const conflictDates = new Set(conflicts.map((c) => c.occurrence.start.toISO()))
   const multi = occurrences.length > 1
   const allTaken = multi && conflictDates.size === occurrences.length
-  const blockedByConflict = conflicts.length > 0 && !override && (!multi || allTaken || editing)
+  const freeCount = occurrences.length - conflictDates.size
+  // A new booking on a taken slot goes on the waiting list (for a series: if ticked).
+  const useWaitlist = !editing && conflicts.length > 0 && !override && (!multi || waitTaken)
+  const blockedByConflict = conflicts.length > 0 && !override && (editing || (allTaken && !waitTaken))
   const minutes = (TIME_OPTIONS.indexOf(endTime) - TIME_OPTIONS.indexOf(startTime)) * 15
   const canSave = !saving && !problem && title.trim().length > 0 && !blockedByConflict && !checking
+  const saveLabel = editing
+    ? 'Save changes'
+    : !multi
+      ? useWaitlist
+        ? 'Join waiting list'
+        : 'Book room'
+      : override || conflicts.length === 0
+        ? `Book ${occurrences.length} dates`
+        : useWaitlist
+          ? freeCount
+            ? `Book ${freeCount}, wait for ${conflictDates.size}`
+            : `Wait for ${conflictDates.size} dates`
+          : `Book ${freeCount} dates`
 
   async function save() {
     if (!canSave || !profile) return
@@ -166,7 +186,6 @@ export default function BookingDialog({ onClose, onSaved, rooms, colleagues, ini
     setError(null)
     const cleanTitle = title.trim()
     const roomName = room?.name ?? 'the room'
-    const owner = booking?.user_id ?? profile.id
 
     try {
       if (!editing) {
@@ -177,20 +196,28 @@ export default function BookingDialog({ onClose, onSaved, rooms, colleagues, ini
           p_slots: occurrences.map((o) => ({ starts_at: o.start.toUTC().toISO(), ends_at: o.end.toUTC().toISO() })),
           p_recurrence: multi ? { freq, until } : null,
           p_override: override,
+          p_waitlist: useWaitlist,
         })
         if (err) throw err
-        const result = data as { created: string[]; skipped: unknown[]; overridden: string[] }
-        if (result.created.length === 0) {
+        const result = data as { created: string[]; waitlisted: string[]; skipped: unknown[]; overridden: string[] }
+        if (result.created.length === 0 && result.waitlisted.length === 0) {
           setError('All selected dates are already taken, so nothing was booked.')
           return
         }
-        const skipped = result.skipped.length ? ` ${result.skipped.length} taken date(s) were skipped.` : ''
-        toast(
-          result.created.length === 1
-            ? `${roomName} is booked for ${fmtDay(occurrences[0].start)}, ${startTime}–${endTime}.`
-            : `${roomName} is booked on ${result.created.length} dates.${skipped}`,
-        )
-        if (guests.length) {
+        const when = `${fmtDay(occurrences[0].start)}, ${startTime}–${endTime}`
+        if (!multi) {
+          toast(
+            result.created.length
+              ? `${roomName} is booked for ${when}.`
+              : `You're on the waiting list for ${roomName}, ${when}. If it frees up, the room is yours automatically and you get an email.`,
+          )
+        } else {
+          const parts = [`${roomName} is booked on ${result.created.length} date${result.created.length === 1 ? '' : 's'}.`]
+          if (result.waitlisted.length) parts.push(`You're on the waiting list for ${result.waitlisted.length} taken date(s).`)
+          if (result.skipped.length) parts.push(`${result.skipped.length} taken date(s) were skipped.`)
+          toast(parts.join(' '))
+        }
+        if (guests.length && result.created.length) {
           void notifyBookings('created', result.created).then((ok) => {
             if (!ok) toast('The booking is saved, but the email to your guests could not be sent.', 'error')
           })
@@ -208,7 +235,8 @@ export default function BookingDialog({ onClose, onSaved, rooms, colleagues, ini
         if (err) throw err
         const ids = (data as string[]) ?? []
         toast(`Updated ${ids.length} booking${ids.length === 1 ? '' : 's'} in this series.`)
-        if (guests.length || owner !== profile.id) void notifyBookings('updated', ids)
+        // Also tells anyone on the waiting list who got a freed slot.
+        void notifyBookings('updated', ids)
       } else if (booking) {
         const start = occurrences[0].start
         const end = occurrences[0].end
@@ -224,7 +252,7 @@ export default function BookingDialog({ onClose, onSaved, rooms, colleagues, ini
           .eq('id', booking.id)
         if (err) throw err
         toast('Your changes are saved.')
-        if (guests.length || owner !== profile.id) void notifyBookings('updated', [booking.id])
+        void notifyBookings('updated', [booking.id])
       }
       onSaved()
       onClose()
@@ -250,7 +278,7 @@ export default function BookingDialog({ onClose, onSaved, rooms, colleagues, ini
             Cancel
           </Button>
           <Button variant="primary" onClick={save} loading={saving} disabled={!canSave}>
-            {editing ? 'Save changes' : multi ? `Book ${occurrences.length - (override ? 0 : conflictDates.size)} dates` : 'Book room'}
+            {saveLabel}
           </Button>
         </>
       }
@@ -419,7 +447,7 @@ export default function BookingDialog({ onClose, onSaved, rooms, colleagues, ini
               <>
                 <p className="font-medium">
                   {conflictDates.size} of {occurrences.length} dates are already taken
-                  {!override && !editing && !allTaken ? ' and will be skipped' : ''}:
+                  {!override && !editing ? (waitTaken ? ' (you go on the waiting list for those)' : ' and will be skipped') : ''}:
                 </p>
                 <ul className="mt-1 space-y-0.5 text-[13px]">
                   {conflicts.slice(0, 5).map((c) => (
@@ -437,6 +465,31 @@ export default function BookingDialog({ onClose, onSaved, rooms, colleagues, ini
                 {fmtRange(firstConflict.starts_at, firstConflict.ends_at)} by{' '}
                 <span className="font-medium">{firstConflict.owner?.full_name}</span> for “{firstConflict.title}”.
               </p>
+            )}
+
+            {!editing && !override && !multi && (
+              <p className="mt-2 flex gap-1.5 text-[13px]">
+                <Hourglass className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                <span>
+                  <span className="font-medium">Join the waiting list</span>: if this booking is cancelled or moved, the room
+                  is automatically yours and you get an email.
+                </span>
+              </p>
+            )}
+
+            {!editing && !override && multi && (
+              <label className="mt-2 flex items-start gap-2 text-[13px]">
+                <input
+                  type="checkbox"
+                  checked={waitTaken}
+                  onChange={(e) => setWaitTaken(e.target.checked)}
+                  className="mt-0.5 accent-[var(--primary)]"
+                />
+                <span>
+                  <span className="font-medium">Put the taken dates on the waiting list</span>: if one frees up, it's
+                  automatically yours and you get an email.
+                </span>
+              </label>
             )}
 
             {availability.freeRooms.length > 0 && (

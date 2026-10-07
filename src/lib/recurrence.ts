@@ -1,6 +1,6 @@
 import type { DateTime } from 'luxon'
 import type { Frequency } from './types'
-import { atTime } from './time'
+import { atTime, isWeekend } from './time'
 
 export interface Occurrence {
   start: DateTime
@@ -61,7 +61,8 @@ export function buildOccurrences(
         break
     }
     if (day > last) break
-    if (freq === 'weekdays' && i > 0 && day.weekday > 5) continue
+    // Rooms are only bookable on weekdays, so weekend dates are left out.
+    if (isWeekend(day)) continue
     // Skip months that don't have this day (e.g. the 31st).
     if (freq === 'monthly' && day.day !== first.day) continue
     days.push(day)

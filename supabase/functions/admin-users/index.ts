@@ -1,7 +1,8 @@
 // Admin-only user management: list, block/unblock, delete, change role.
 
 import { corsHeaders, json } from '../_shared/cors.ts'
-import { adminClient, getCaller } from '../_shared/supabase.ts'
+import { adminClient, appUrl, getCaller } from '../_shared/supabase.ts'
+import { sendPromotionEmails } from '../_shared/promotions.ts'
 
 type Action = 'list' | 'block' | 'unblock' | 'delete' | 'set_role'
 
@@ -68,6 +69,8 @@ Deno.serve(async (req) => {
         // Removing the login also removes the profile and that person's bookings.
         const { error } = await admin.auth.admin.deleteUser(userId)
         if (error) throw error
+        // Their freed slots may have gone to people on the waiting list.
+        await sendPromotionEmails(admin, appUrl()).catch((err) => console.error(err))
         return json({ ok: true })
       }
       case 'set_role': {

@@ -4,6 +4,8 @@
 //               else's booking, the owner is told as well
 //   cancelled → guests are told; if the admin cancelled (or overruled)
 //               someone else's booking, the owner is told why
+//   cancelled / updated → whoever was on the waiting list for the freed
+//               slot and now got the room is told it's confirmed
 //
 // The website calls this right after it saved a change. The function only
 // trusts what is in the database and only for changes the caller just made.
@@ -12,6 +14,7 @@ import { corsHeaders, json } from '../_shared/cors.ts'
 import { adminClient, appUrl, getCaller } from '../_shared/supabase.ts'
 import { sendMail } from '../_shared/mailer.ts'
 import { buildIcs, escapeHtml, formatDate, formatSlot, layout } from '../_shared/email.ts'
+import { sendPromotionEmails } from '../_shared/promotions.ts'
 
 type NotifyEvent = 'created' | 'updated' | 'cancelled'
 
@@ -28,6 +31,7 @@ interface BookingRow {
   starts_at: string
   ends_at: string
   series_id: string | null
+  status: 'confirmed' | 'waitlist'
   cancelled_at: string | null
   cancelled_by: string | null
   cancel_reason: string | null
@@ -71,7 +75,7 @@ Deno.serve(async (req) => {
     const { data, error } = await admin
       .from('bookings')
       .select(
-        'id, user_id, title, guests, starts_at, ends_at, series_id, cancelled_at, cancelled_by, cancel_reason, created_at, updated_at, room:rooms(name), owner:profiles!bookings_user_id_fkey(full_name, email)',
+        'id, user_id, title, guests, starts_at, ends_at, series_id, status, cancelled_at, cancelled_by, cancel_reason, created_at, updated_at, room:rooms(name), owner:profiles!bookings_user_id_fkey(full_name, email)',
       )
       .in('id', ids)
       .order('starts_at')
@@ -95,7 +99,8 @@ Deno.serve(async (req) => {
     const ownerMail = new Map<string, BookingRow[]>()
     for (const b of bookings) {
       const ownerEmail = b.owner?.email.toLowerCase()
-      for (const guest of b.guests) {
+      // Guests are only invited once a waiting-list request becomes a real booking.
+      for (const guest of b.status === 'waitlist' ? [] : b.guests) {
         if (guest === callerEmail || guest === ownerEmail) continue
         guestMail.set(guest, [...(guestMail.get(guest) ?? []), b])
       }
@@ -202,7 +207,11 @@ Deno.serve(async (req) => {
     const results = await Promise.allSettled(mails.map((m) => sendMail(m)))
     const failed = results.filter((r) => r.status === 'rejected') as PromiseRejectedResult[]
     failed.forEach((f) => console.error(f.reason))
-    return json({ sent: results.length - failed.length, failed: failed.length }, failed.length ? 502 : 200)
+    const promoted = event === 'created' ? 0 : await sendPromotionEmails(admin, link)
+    return json(
+      { sent: results.length - failed.length + promoted, failed: failed.length },
+      failed.length ? 502 : 200,
+    )
   } catch (err) {
     console.error(err)
     return json({ error: err instanceof Error ? err.message : 'Unexpected error' }, 500)

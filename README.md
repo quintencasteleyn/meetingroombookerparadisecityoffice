@@ -5,11 +5,12 @@ Book the three meeting rooms at the Paradise City office in a Google-Calendar-li
 **What colleagues can do**
 
 - Create an account with their **@paradisecity.be** or **@touquetmusicbeach.com** address (with email confirmation) and reset a forgotten password by email.
-- See the **current week** (Monday–Sunday, 07:00–20:00) right away, then browse with ◀ ▶ and jump back with **Today**.
+- See the **current week** (Monday–Friday, 07:00–20:00) right away, then browse with ◀ ▶ and jump back with **Today**. On Saturday and Sunday it opens on next week.
 - Filter with the dropdown: **All rooms** side by side, or one room at a time.
 - **Click or drag** in the calendar to book a slot, in 15-minute steps up to a full day, at most 3 months ahead.
 - See who booked what, and for which topic.
-- Set up **recurring bookings**: every day, weekdays, weekly, every 2 weeks, or monthly. Dates that are already taken are skipped.
+- Set up **recurring bookings**: every weekday, weekly, every 2 weeks, or monthly. Dates that are already taken are skipped or put on the waiting list.
+- Join the **waiting list** for a taken slot. When that booking is cancelled or moved, the first person waiting gets the room automatically and an email.
 - Add **guests**. They receive an email with the details and a calendar file for Outlook.
 - Handle a **conflict** in a few clicks. The app shows which rooms are free, or you can use the buttons *Ask to switch rooms*, *Ask for this slot* and *Email the organiser*. Each button opens a ready-to-send email in your own mail app.
 - Pick their own **colours** for the background and buttons. The choice is saved on their account and only affects them.
@@ -127,11 +128,12 @@ From now on, Supabase sends confirmation and password-reset emails through your 
 | Rule | Value |
 |---|---|
 | Who can sign up | Only `@paradisecity.be` and `@touquetmusicbeach.com` addresses |
-| Opening hours | 07:00–20:00, every day incl. weekends (Brussels time) |
+| Opening hours | 07:00–20:00, Monday to Friday (Brussels time) |
 | Booking length | 15 minutes up to the full day, in 15-minute steps |
 | How far ahead | 3 months |
 | Double bookings | Impossible, enforced by the database |
-| Recurring bookings | Daily, weekdays, weekly, every 2 weeks, monthly (max 3 months) |
+| Taken slot | Join the waiting list; first come, first served when it frees up |
+| Recurring bookings | Weekdays, weekly, every 2 weeks, monthly (max 3 months) |
 | Changing bookings | Owners change or cancel their own; admins change, cancel or overrule all |
 | Colours | Personal per account |
 

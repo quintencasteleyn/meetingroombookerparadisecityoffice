@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import type { DateTime } from 'luxon'
-import { Repeat } from 'lucide-react'
+import { Hourglass, Repeat } from 'lucide-react'
 import type { Booking, Room } from '../lib/types'
 import {
   DAY_END_HOUR,
@@ -63,13 +63,29 @@ export default function WeekGrid({ days, rooms, allRooms, bookings, userId, now,
   const today = now.startOf('day')
   const lastDay = lastBookableDay()
 
-  const byCell = useMemo(() => {
-    const map = new Map<string, Booking[]>()
+  // Confirmed bookings fill the grid; your own waiting-list requests are drawn as dashed outlines.
+  const [byCell, waitsByCell] = useMemo(() => {
+    const confirmed = new Map<string, Booking[]>()
+    const waits = new Map<string, Booking[]>()
     for (const b of bookings) {
       const key = `${fromIso(b.starts_at).toISODate()}|${b.room_id}`
-      map.set(key, [...(map.get(key) ?? []), b])
+      if (b.status === 'confirmed') confirmed.set(key, [...(confirmed.get(key) ?? []), b])
+      else if (b.user_id === userId) waits.set(key, [...(waits.get(key) ?? []), b])
     }
-    return map
+    return [confirmed, waits]
+  }, [bookings, userId])
+
+  const waitingCount = useMemo(() => {
+    const counts = new Map<string, number>()
+    const waiting = bookings.filter((b) => b.status === 'waitlist')
+    for (const b of bookings) {
+      if (b.status !== 'confirmed') continue
+      const n = waiting.filter(
+        (w) => w.room_id === b.room_id && w.starts_at < b.ends_at && w.ends_at > b.starts_at,
+      ).length
+      if (n) counts.set(b.id, n)
+    }
+    return counts
   }, [bookings])
 
   const roomById = useMemo(() => new Map(allRooms.map((r) => [r.id, r])), [allRooms])
@@ -234,6 +250,7 @@ export default function WeekGrid({ days, rooms, allRooms, bookings, userId, now,
                   {rooms.map((room, roomIndex) => {
                     const key = `${day.toISODate()}|${room.id}`
                     const cell = byCell.get(key) ?? []
+                    const waits = waitsByCell.get(key) ?? []
                     const active = drag && !drag.touch && drag.roomId === room.id && drag.day.hasSame(day, 'day')
                     const selStart = active ? Math.min(drag.anchor, drag.current) : 0
                     const selEnd = active ? Math.max(drag.anchor, drag.current) + 1 : 0
@@ -273,6 +290,7 @@ export default function WeekGrid({ days, rooms, allRooms, bookings, userId, now,
                           const mine = b.user_id === userId
                           const height = (e - s) * QUARTER_PX - 2
                           const tiny = height < 26
+                          const waiting = mine ? (waitingCount.get(b.id) ?? 0) : 0
                           return (
                             <button
                               key={b.id}
@@ -280,7 +298,9 @@ export default function WeekGrid({ days, rooms, allRooms, bookings, userId, now,
                               onPointerDown={(ev) => ev.stopPropagation()}
                               onClick={() => onOpen(b)}
                               title={`${b.title}\n${fmtRange(b.starts_at, b.ends_at)} · ${b.owner?.full_name ?? ''}\n${roomById.get(b.room_id)?.name ?? ''}`}
-                              className="absolute inset-x-0.5 z-10 overflow-hidden rounded-md px-1.5 text-left leading-tight shadow-sm transition hover:z-20 hover:shadow-md focus-visible:outline-2 focus-visible:outline-primary"
+                              className={`absolute inset-x-0.5 z-10 overflow-hidden rounded-md px-1.5 text-left leading-tight shadow-sm transition hover:z-20 hover:shadow-md focus-visible:outline-2 focus-visible:outline-primary ${
+                                mine ? 'cursor-pointer' : 'cursor-default'
+                              }`}
                               style={{
                                 top: s * QUARTER_PX + 1,
                                 height,
@@ -299,6 +319,12 @@ export default function WeekGrid({ days, rooms, allRooms, bookings, userId, now,
                                 <>
                                   <div className="flex items-start gap-1 text-[11.5px] font-semibold">
                                     <span className={`min-w-0 flex-1 ${narrow ? 'truncate' : 'line-clamp-2'}`}>{b.title}</span>
+                                    {waiting > 0 && (
+                                      <span className="mt-px inline-flex shrink-0 items-center opacity-80" title={`${waiting} waiting for this slot`}>
+                                        <Hourglass className="size-3" />
+                                        {!narrow && <span className="text-[10px]">{waiting}</span>}
+                                      </span>
+                                    )}
                                     {b.series_id && !narrow && <Repeat className="mt-px size-3 shrink-0 opacity-70" />}
                                   </div>
                                   <div className="truncate text-[10.5px] opacity-80">
@@ -311,6 +337,32 @@ export default function WeekGrid({ days, rooms, allRooms, bookings, userId, now,
                                   )}
                                 </>
                               )}
+                            </button>
+                          )
+                        })}
+
+                        {waits.map((b) => {
+                          const [s, e] = slotSpan(b)
+                          const color = roomById.get(b.room_id)?.color ?? '#64748b'
+                          return (
+                            <button
+                              key={b.id}
+                              type="button"
+                              onPointerDown={(ev) => ev.stopPropagation()}
+                              onClick={() => onOpen(b)}
+                              title={`Waiting list: ${b.title}\n${fmtRange(b.starts_at, b.ends_at)}`}
+                              className="absolute right-0.5 z-[15] w-[45%] cursor-pointer overflow-hidden rounded-md border-2 border-dashed px-1 text-left text-[10.5px] font-semibold leading-tight backdrop-blur-[1px] hover:z-20"
+                              style={{
+                                top: s * QUARTER_PX + 1,
+                                height: (e - s) * QUARTER_PX - 2,
+                                borderColor: color,
+                                background: `color-mix(in srgb, ${color} 10%, var(--surface))`,
+                                color: 'var(--fg)',
+                              }}
+                            >
+                              <span className="flex items-center gap-0.5 truncate">
+                                <Hourglass className="size-3 shrink-0" /> {narrow ? '' : 'Waiting'}
+                              </span>
                             </button>
                           )
                         })}

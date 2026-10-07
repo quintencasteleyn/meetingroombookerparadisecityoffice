@@ -12,8 +12,11 @@ import type { Booking } from '../lib/types'
 import {
   DAY_END_HOUR,
   DAY_START_HOUR,
+  WORK_DAYS,
   currentQuarterStart,
+  currentWeekStart,
   fromIso,
+  isWeekend,
   lastBookableDay,
   nowInBrussels,
   weekLabel,
@@ -28,11 +31,18 @@ function relativeWeek(weekStart: DateTime): string {
   return diff > 0 ? `In ${diff} weeks` : `${-diff} weeks ago`
 }
 
+/** Monday = 0 … Friday = 4; on weekends the week starts fresh on Monday. */
+function todayIndex(): number {
+  const now = nowInBrussels()
+  return isWeekend(now) ? 0 : now.weekday - 1
+}
+
 /** Suggested slot for the "New booking" button: the next free-ish hour. */
 function suggestedSlot(): { start: DateTime; end: DateTime } {
   let start = currentQuarterStart().plus({ minutes: 15 })
   if (start.hour < DAY_START_HOUR) start = start.set({ hour: DAY_START_HOUR, minute: 0 })
   if (start.hour >= DAY_END_HOUR - 1) start = start.plus({ days: 1 }).set({ hour: 9, minute: 0 })
+  while (isWeekend(start)) start = start.plus({ days: 1 }).set({ hour: 9, minute: 0 })
   const dayEnd = start.set({ hour: DAY_END_HOUR, minute: 0 })
   const end = start.plus({ hours: 1 }) > dayEnd ? dayEnd : start.plus({ hours: 1 })
   return { start, end }
@@ -43,9 +53,9 @@ export default function CalendarPage() {
   const toast = useToast()
   const now = useNow()
   const wide = useMediaQuery('(min-width: 900px)')
-  const [weekStart, setWeekStart] = useState(() => weekStartOf(nowInBrussels()))
+  const [weekStart, setWeekStart] = useState(() => currentWeekStart())
   const [roomFilter, setRoomFilter] = useLocalPreference<string>('pcr-room-filter', 'all')
-  const [mobileDay, setMobileDay] = useState(() => nowInBrussels().weekday - 1)
+  const [mobileDay, setMobileDay] = useState(() => todayIndex())
   const { rooms } = useRooms()
   const colleagues = useColleagues()
   const { bookings, loading, reload } = useBookings(weekStart, weekStart.plus({ weeks: 1 }))
@@ -54,13 +64,13 @@ export default function CalendarPage() {
   const [viewing, setViewing] = useState<Booking | null>(null)
   const [editing, setEditing] = useState<Booking | null>(null)
 
-  const thisWeek = weekStartOf(nowInBrussels())
+  const thisWeek = currentWeekStart()
   const isThisWeek = weekStart.hasSame(thisWeek, 'day')
   const maxWeek = weekStartOf(lastBookableDay())
-  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => weekStart.plus({ days: i })), [weekStart])
+  const days = useMemo(() => Array.from({ length: WORK_DAYS }, (_, i) => weekStart.plus({ days: i })), [weekStart])
 
   useEffect(() => {
-    setMobileDay(isThisWeek ? nowInBrussels().weekday - 1 : 0)
+    setMobileDay(isThisWeek ? todayIndex() : 0)
   }, [weekStart, isThisWeek])
 
   const visibleRooms = useMemo(() => {
@@ -74,7 +84,8 @@ export default function CalendarPage() {
   )
 
   const myUpcoming = useMemo(
-    () => bookings.filter((b) => b.user_id === profile?.id && fromIso(b.ends_at) > now).length,
+    () =>
+      bookings.filter((b) => b.user_id === profile?.id && b.status === 'confirmed' && fromIso(b.ends_at) > now).length,
     [bookings, profile?.id, now],
   )
 
@@ -170,10 +181,12 @@ export default function CalendarPage() {
 
       {/* Day picker on phones */}
       {!wide && (
-        <div className="mb-3 grid grid-cols-7 gap-1">
+        <div className="mb-3 grid grid-cols-5 gap-1">
           {days.map((d, i) => {
             const isToday = d.hasSame(now, 'day')
-            const count = visibleBookings.filter((b) => fromIso(b.starts_at).hasSame(d, 'day')).length
+            const count = visibleBookings.filter(
+              (b) => b.status === 'confirmed' && fromIso(b.starts_at).hasSame(d, 'day'),
+            ).length
             return (
               <button
                 key={d.toISODate()}
