@@ -43,8 +43,10 @@ export interface Booking {
   ends_at: string
   series_id: string | null
   recurrence: Recurrence | null
+  /** 'waitlist' = waiting for a slot that is taken; it becomes 'confirmed' when the slot frees up. */
+  status: 'confirmed' | 'waitlist'
   owner: { full_name: string; email: string } | null
 }
 
 export const BOOKING_COLUMNS =
-  'id, room_id, user_id, title, guests, starts_at, ends_at, series_id, recurrence, owner:profiles!bookings_user_id_fkey(full_name, email)'
+  'id, room_id, user_id, title, guests, starts_at, ends_at, series_id, recurrence, status, owner:profiles!bookings_user_id_fkey(full_name, email)'

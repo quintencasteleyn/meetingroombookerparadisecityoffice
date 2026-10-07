@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { ArrowLeftRight, CalendarClock, Mail, MapPin, Pencil, Repeat, Trash2, User, Users } from 'lucide-react'
+import { ArrowLeftRight, CalendarClock, Hourglass, Mail, MapPin, Pencil, Repeat, Trash2, User, Users } from 'lucide-react'
 import { Alert, Avatar, Button, Dialog } from './ui'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -28,9 +28,27 @@ export default function BookingDetails({ booking, rooms, colleagues, weekBooking
   const end = fromIso(booking.ends_at)
   const mine = booking.user_id === profile?.id
   const ended = end <= nowInBrussels()
+  const waiting = booking.status === 'waitlist'
   const canManage = (mine || isAdmin) && !ended
   const ownerFirst = booking.owner?.full_name.split(' ')[0] ?? 'the organiser'
   const nameOf = new Map(colleagues.map((c) => [c.email.toLowerCase(), c.full_name]))
+
+  const overlapping = useMemo(
+    () =>
+      weekBookings.filter(
+        (b) =>
+          b.id !== booking.id &&
+          b.room_id === booking.room_id &&
+          b.starts_at < booking.ends_at &&
+          b.ends_at > booking.starts_at,
+      ),
+    [weekBookings, booking.id, booking.room_id, booking.starts_at, booking.ends_at],
+  )
+  // For a waiting-list entry: the booking(s) in the way. For a booking: who is waiting for it.
+  const blockedBy = overlapping.filter((b) => b.status === 'confirmed')
+  const waitingList = overlapping
+    .filter((b) => b.status === 'waitlist')
+    .sort((a, b) => (a.starts_at < b.starts_at ? -1 : 1))
 
   const freeRooms = useMemo(() => {
     const from = fromIso(booking.starts_at)
@@ -38,7 +56,9 @@ export default function BookingDetails({ booking, rooms, colleagues, weekBooking
     return rooms.filter(
       (r) =>
         r.id !== booking.room_id &&
-        !weekBookings.some((b) => b.room_id === r.id && fromIso(b.starts_at) < to && fromIso(b.ends_at) > from),
+        !weekBookings.some(
+          (b) => b.status === 'confirmed' && b.room_id === r.id && fromIso(b.starts_at) < to && fromIso(b.ends_at) > from,
+        ),
     )
   }, [rooms, weekBookings, booking.room_id, booking.starts_at, booking.ends_at])
 
@@ -50,11 +70,20 @@ export default function BookingDetails({ booking, rooms, colleagues, weekBooking
         title={
           <span className="flex items-center gap-2">
             <span className="size-3 shrink-0 rounded-full" style={{ background: room?.color }} />
-            {booking.title}
+            {waiting ? `Waiting list: ${booking.title}` : booking.title}
           </span>
         }
         footer={
-          canManage ? (
+          canManage && waiting ? (
+            <>
+              <Button variant="ghost" onClick={onClose} className="mr-auto">
+                Close
+              </Button>
+              <Button variant="danger" icon={<Trash2 className="size-4" />} onClick={() => setCancelling(true)}>
+                Leave waiting list
+              </Button>
+            </>
+          ) : canManage ? (
             <>
               <Button variant="ghost" icon={<Trash2 className="size-4" />} onClick={() => setCancelling(true)} className="mr-auto text-red-600">
                 Cancel booking
@@ -68,6 +97,22 @@ export default function BookingDetails({ booking, rooms, colleagues, weekBooking
           )
         }
       >
+        {waiting && (
+          <div className="mb-4">
+            <Alert tone="info" icon={<Hourglass className="size-4 text-primary" />}>
+              {mine ? "You're" : `${booking.owner?.full_name} is`} on the waiting list.
+              {blockedBy.length > 0 && (
+                <>
+                  {' '}
+                  The room is booked by{' '}
+                  {blockedBy.map((b) => `${b.owner?.full_name} (${fmtRange(b.starts_at, b.ends_at)})`).join(', ')}.
+                </>
+              )}{' '}
+              If that booking is cancelled or moved, this one is confirmed automatically and{' '}
+              {mine ? 'you get' : 'they get'} an email.
+            </Alert>
+          </div>
+        )}
         <dl className="space-y-3 text-sm">
           <div className="flex gap-3">
             <CalendarClock className="mt-0.5 size-4 shrink-0 text-muted" />
@@ -119,9 +164,29 @@ export default function BookingDetails({ booking, rooms, colleagues, weekBooking
               </div>
             </div>
           )}
+          {!waiting && waitingList.length > 0 && (
+            <div className="flex gap-3">
+              <Hourglass className="mt-0.5 size-4 shrink-0 text-muted" />
+              <div className="min-w-0">
+                <dt className="text-muted">Waiting list</dt>
+                <dd className="mt-1 space-y-0.5">
+                  {waitingList.map((w, i) => (
+                    <div key={w.id}>
+                      {i + 1}. {w.owner?.full_name} · {fmtRange(w.starts_at, w.ends_at)}
+                    </div>
+                  ))}
+                </dd>
+                {mine && !ended && (
+                  <dd className="mt-1 text-xs text-muted">
+                    If you cancel, the first person waiting gets the room automatically and an email.
+                  </dd>
+                )}
+              </div>
+            </div>
+          )}
         </dl>
 
-        {!mine && !ended && profile && (
+        {!mine && !waiting && !ended && profile && (
           <div className="mt-5 rounded-xl border border-line bg-surface-2/60 p-3">
             <p className="mb-2 text-[13px] font-medium">Need this room?</p>
             <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap">
@@ -182,6 +247,7 @@ function CancelDialog({ booking, onClose, onDone }: { booking: Booking; onClose:
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const othersBooking = booking.user_id !== profile?.id
+  const waitlist = booking.status === 'waitlist'
 
   async function confirm() {
     setSaving(true)
@@ -203,8 +269,15 @@ function CancelDialog({ booking, onClose, onDone }: { booking: Booking; onClose:
       return
     }
     const ids = (data ?? []).map((r: { id: string }) => r.id)
-    toast(ids.length > 1 ? `${ids.length} bookings cancelled.` : 'Booking cancelled.')
-    if (booking.guests.length || othersBooking) void notifyBookings('cancelled', ids)
+    toast(
+      waitlist
+        ? "You've left the waiting list."
+        : ids.length > 1
+          ? `${ids.length} bookings cancelled.`
+          : 'Booking cancelled.',
+    )
+    // Emails guests / the owner where needed, and whoever on the waiting list got the room.
+    void notifyBookings('cancelled', ids)
     onDone()
   }
 
@@ -212,14 +285,14 @@ function CancelDialog({ booking, onClose, onDone }: { booking: Booking; onClose:
     <Dialog
       open
       onClose={onClose}
-      title="Cancel this booking?"
+      title={waitlist ? 'Leave the waiting list?' : 'Cancel this booking?'}
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
-            Keep it
+            {waitlist ? 'Stay on it' : 'Keep it'}
           </Button>
           <Button variant="danger" loading={saving} onClick={confirm}>
-            Cancel booking
+            {waitlist ? 'Leave waiting list' : 'Cancel booking'}
           </Button>
         </>
       }
@@ -257,7 +330,7 @@ function CancelDialog({ booking, onClose, onDone }: { booking: Booking; onClose:
             />
           </div>
         )}
-        {booking.guests.length > 0 && (
+        {booking.guests.length > 0 && !waitlist && (
           <p className="text-muted">The {booking.guests.length} guest(s) will get an email that the meeting is cancelled.</p>
         )}
         {error && <Alert tone="error">{error}</Alert>}
