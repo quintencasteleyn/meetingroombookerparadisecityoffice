@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { friendlyError, supabase } from '../lib/supabase'
 import { DEFAULT_THEME, PRESETS, applyTheme, readableOn, resolveTheme, type ThemeSettings } from '../lib/theme'
+import { useAdmins } from '../lib/holidays'
+import { WORK_TYPE_LABEL } from '../components/WorkTypeChoice'
 
 function Card({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
@@ -164,6 +166,8 @@ export default function SettingsPage() {
         </form>
       </Card>
 
+      <WorkStatusCard />
+
       <Card title="Password">
         <form onSubmit={savePassword} className="grid gap-4 sm:grid-cols-2">
           <Field label="New password" hint="At least 8 characters.">
@@ -203,6 +207,36 @@ export default function SettingsPage() {
         </form>
       </Card>
     </div>
+  )
+}
+
+function WorkStatusCard() {
+  const { profile } = useAuth()
+  const admins = useAdmins()
+  const status = profile?.work_type
+  return (
+    <Card title="Work status" subtitle="Decides where your days off in the holiday planner come from.">
+      <p className="text-sm">
+        You are registered as{' '}
+        <span className="rounded-md bg-primary/10 px-2 py-0.5 font-semibold text-primary">
+          {status ? WORK_TYPE_LABEL[status] : 'not chosen yet'}
+        </span>
+      </p>
+      <p className="mt-3 text-sm text-muted">
+        {status === 'employee'
+          ? 'Your days off come in automatically from Sodeco.'
+          : status === 'freelancer'
+            ? 'You add your own days off in the holiday planner.'
+            : ''}{' '}
+        Is this wrong? Ask one of the admins to change it:{' '}
+        {admins.map((a, i) => (
+          <span key={a.email}>
+            {i > 0 && ', '}
+            <span className="select-all font-medium text-fg">{a.email}</span>
+          </span>
+        ))}
+      </p>
+    </Card>
   )
 }
 

@@ -10,6 +10,8 @@ export interface Attachment {
 
 export interface Mail {
   to: string[]
+  /** Hidden recipients, e.g. the whole company for the weekly email. */
+  bcc?: string[]
   subject: string
   html: string
   replyTo?: { email: string; name?: string }
@@ -52,6 +54,11 @@ function base64Utf8(text: string): string {
   return btoa(binary)
 }
 
+/** The mailbox all emails are sent from, e.g. rooms@paradisecity.be. */
+export function mailFrom(): string {
+  return env('MAIL_FROM')
+}
+
 export async function sendMail(mail: Mail): Promise<void> {
   const from = env('MAIL_FROM')
   const token = await graphToken()
@@ -63,6 +70,7 @@ export async function sendMail(mail: Mail): Promise<void> {
         subject: mail.subject,
         body: { contentType: 'HTML', content: mail.html },
         toRecipients: mail.to.map((address) => ({ emailAddress: { address } })),
+        bccRecipients: mail.bcc?.map((address) => ({ emailAddress: { address } })),
         replyTo: mail.replyTo
           ? [{ emailAddress: { address: mail.replyTo.email, name: mail.replyTo.name } }]
           : undefined,

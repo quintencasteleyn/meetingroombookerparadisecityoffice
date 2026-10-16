@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
                       end: b.ends_at,
                       summary: b.title,
                       location: `${b.room?.name ?? 'Meeting room'} · Paradise City office`,
-                      description: `Organised by ${organizer.full_name}. Booked via Paradise City Rooms: ${link}`,
+                      description: `Organised by ${organizer.full_name}. Booked via Paradise City Office: ${link}`,
                       organizer: { name: organizer.full_name, email: organizer.email },
                       sequence: sequence(b),
                     })),

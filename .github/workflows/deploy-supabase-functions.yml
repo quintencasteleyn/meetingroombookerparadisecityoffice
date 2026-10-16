@@ -1,4 +1,4 @@
-# Deploys the Supabase Edge Functions (emails + admin user management).
+# Deploys the Supabase Edge Functions (emails, admin user management and the weekly holiday email).
 # Needs secret SUPABASE_ACCESS_TOKEN and variable SUPABASE_PROJECT_REF (see README).
 name: Deploy Supabase functions
 
@@ -21,6 +21,6 @@ jobs:
           version: latest
       - name: Deploy functions
         run: |
-          for fn in notify admin-users auth-email; do
+          for fn in notify admin-users auth-email holiday-digest; do
             supabase functions deploy "$fn" --project-ref "$PROJECT_REF" --no-verify-jwt
           done

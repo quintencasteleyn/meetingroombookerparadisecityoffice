@@ -1,10 +1,11 @@
-// Admin-only user management: list, block/unblock, delete, change role.
+// Admin-only user management: list, block/unblock, delete, change role
+// and work status (full-time employee or freelancer).
 
 import { corsHeaders, json } from '../_shared/cors.ts'
 import { adminClient, appUrl, getCaller } from '../_shared/supabase.ts'
 import { sendPromotionEmails } from '../_shared/promotions.ts'
 
-type Action = 'list' | 'block' | 'unblock' | 'delete' | 'set_role'
+type Action = 'list' | 'block' | 'unblock' | 'delete' | 'set_role' | 'set_work_type'
 
 const BLOCK_FOREVER = '876000h' // 100 years
 
@@ -18,18 +19,25 @@ Deno.serve(async (req) => {
     if (!caller) return json({ error: 'Not signed in' }, 401)
     if (caller.role !== 'admin') return json({ error: 'Only the admin can manage users.' }, 403)
 
-    const body = (await req.json()) as { action?: Action; userId?: string; role?: string }
+    const body = (await req.json()) as { action?: Action; userId?: string; role?: string; workType?: string }
 
     if (body.action === 'list') {
-      const [{ data: profiles, error: pErr }, { data: authData, error: aErr }, { data: upcoming, error: bErr }] =
-        await Promise.all([
-          admin.from('profiles').select('id, email, full_name, role, blocked, created_at').order('full_name'),
-          admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
-          admin.from('bookings').select('user_id').is('cancelled_at', null).gt('ends_at', new Date().toISOString()),
-        ])
+      const [
+        { data: profiles, error: pErr },
+        { data: authData, error: aErr },
+        { data: upcoming, error: bErr },
+        { data: staff, error: sErr },
+      ] = await Promise.all([
+        admin.from('profiles').select('id, email, full_name, role, blocked, work_type, created_at').order('full_name'),
+        admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+        admin.from('bookings').select('user_id').is('cancelled_at', null).gt('ends_at', new Date().toISOString()),
+        admin.from('staff').select('email').eq('active', true),
+      ])
       if (pErr) throw pErr
       if (aErr) throw aErr
       if (bErr) throw bErr
+      if (sErr) throw sErr
+      const onList = new Set((staff ?? []).map((s) => s.email))
 
       const authById = new Map(authData.users.map((u) => [u.id, u]))
       const counts = new Map<string, number>()
@@ -41,12 +49,27 @@ Deno.serve(async (req) => {
           last_sign_in_at: authById.get(p.id)?.last_sign_in_at ?? null,
           email_confirmed_at: authById.get(p.id)?.email_confirmed_at ?? null,
           upcoming_bookings: counts.get(p.id) ?? 0,
+          on_employee_list: onList.has(p.email),
         })),
       })
     }
 
     const userId = body.userId
     if (!userId) return json({ error: 'No user selected.' }, 400)
+
+    // Admins may change their own work status; everything else only for others.
+    if (body.action === 'set_work_type') {
+      if (body.workType !== 'employee' && body.workType !== 'freelancer') return json({ error: 'Unknown status.' }, 400)
+      const { data: changed, error } = await admin
+        .from('profiles')
+        .update({ work_type: body.workType })
+        .eq('id', userId)
+        .select('id')
+      if (error) throw error
+      if (!changed?.length) return json({ error: 'User not found.' }, 404)
+      return json({ ok: true })
+    }
+
     if (userId === caller.id) return json({ error: "You can't do this to your own account." }, 400)
 
     const { data: target } = await admin.from('profiles').select('id').eq('id', userId).maybeSingle()

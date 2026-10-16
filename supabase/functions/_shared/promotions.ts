@@ -78,7 +78,7 @@ export async function sendPromotionEmails(admin: SupabaseClient, link: string): 
                 end: b.ends_at,
                 summary: b.title,
                 location: `${b.room?.name ?? 'Meeting room'} · Paradise City office`,
-                description: `Booked via Paradise City Rooms: ${link}`,
+                description: `Booked via Paradise City Office: ${link}`,
                 organizer: { name: owner.full_name, email: owner.email },
                 sequence: Math.floor(Date.parse(b.updated_at) / 1000) % 2_000_000_000,
               })),

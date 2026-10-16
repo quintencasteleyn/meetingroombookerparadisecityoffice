@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { DateTime } from 'luxon'
-import { Ban, Copy, DoorOpen, Search, ShieldCheck, ShieldOff, Trash2, Unlock, Users } from 'lucide-react'
+import { Ban, Copy, DoorOpen, Search, ShieldCheck, ShieldOff, Trash2, TreePalm, Unlock, Users } from 'lucide-react'
 import { Alert, Avatar, Button, Dialog, Field, Spinner, inputClass } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { callFunction, friendlyError, supabase } from '../lib/supabase'
 import { useRooms } from '../lib/hooks'
-import type { Role, Room } from '../lib/types'
+import type { Role, Room, WorkType } from '../lib/types'
 import { appLink } from '../lib/mailto'
 import { ALLOWED_DOMAINS_TEXT } from './AuthPages'
+import HolidaysAdmin from '../components/admin/HolidaysAdmin'
 
 interface AdminUser {
   id: string
@@ -20,6 +21,8 @@ interface AdminUser {
   last_sign_in_at: string | null
   email_confirmed_at: string | null
   upcoming_bookings: number
+  work_type: WorkType | null
+  on_employee_list: boolean
 }
 
 type PendingAction =
@@ -34,7 +37,7 @@ function ago(iso: string | null): string {
 }
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<'users' | 'rooms'>('users')
+  const [tab, setTab] = useState<'users' | 'holidays' | 'rooms'>('users')
   const signupLink = `${appLink()}#/signup`
   const toast = useToast()
 
@@ -43,19 +46,20 @@ export default function AdminPage() {
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Admin</h1>
-          <p className="text-sm text-muted">Manage colleagues and meeting rooms.</p>
+          <p className="text-sm text-muted">Manage colleagues, the holiday planner and the meeting rooms.</p>
         </div>
         <div className="flex rounded-xl border border-line bg-surface p-1">
           {(
             [
               ['users', 'Users', Users],
+              ['holidays', 'Holidays', TreePalm],
               ['rooms', 'Rooms', DoorOpen],
             ] as const
           ).map(([id, label, Icon]) => (
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-medium ${
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium sm:px-4 ${
                 tab === id ? 'bg-primary text-on-primary shadow-sm' : 'text-muted hover:text-fg'
               }`}
             >
@@ -85,7 +89,7 @@ export default function AdminPage() {
         </Button>
       </div>
 
-      {tab === 'users' ? <UsersPanel /> : <RoomsPanel />}
+      {tab === 'users' ? <UsersPanel /> : tab === 'holidays' ? <HolidaysAdmin /> : <RoomsPanel />}
     </div>
   )
 }
@@ -112,6 +116,16 @@ function UsersPanel() {
   useEffect(() => {
     void load()
   }, [load])
+
+  async function setWorkType(user: AdminUser, workType: WorkType) {
+    try {
+      await callFunction('admin-users', { action: 'set_work_type', userId: user.id, workType })
+      toast(`${user.full_name} is now ${workType === 'employee' ? 'a full-time employee' : 'a freelancer'}.`)
+      await load()
+    } catch (err) {
+      toast(friendlyError(err), 'error')
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -208,6 +222,24 @@ function UsersPanel() {
                       {u.upcoming_bookings === 1 ? '' : 's'}
                     </p>
                   </div>
+                </div>
+                <div className="flex flex-col gap-0.5 sm:items-end">
+                  <select
+                    aria-label={`Work status of ${u.full_name}`}
+                    className="h-8 rounded-lg border border-line bg-surface px-2 text-[13px]"
+                    value={u.work_type ?? ''}
+                    disabled={u.on_employee_list}
+                    onChange={(e) => void setWorkType(u, e.target.value as WorkType)}
+                  >
+                    {!u.work_type && (
+                      <option value="" disabled>
+                        Status not chosen yet
+                      </option>
+                    )}
+                    <option value="employee">Full-time employee</option>
+                    <option value="freelancer">Freelancer</option>
+                  </select>
+                  {u.on_employee_list && <span className="text-[11px] text-muted">On the employee list</span>}
                 </div>
                 {!me && (
                   <div className="flex flex-wrap gap-1.5 sm:justify-end">

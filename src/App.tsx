@@ -7,6 +7,8 @@ import { Spinner } from './components/ui'
 import CalendarPage from './pages/CalendarPage'
 import SettingsPage from './pages/SettingsPage'
 import AdminPage from './pages/AdminPage'
+import HolidaysPage from './pages/HolidaysPage'
+import FaqPage from './pages/FaqPage'
 import {
   AuthConfirmPage,
   AuthLayout,
@@ -65,6 +67,8 @@ export default function App() {
             <Route path="/reset-password" element={<RequireAuth><ResetPasswordPage /></RequireAuth>} />
             <Route element={<RequireAuth><Shell /></RequireAuth>}>
               <Route path="/" element={<CalendarPage />} />
+              <Route path="/holidays" element={<HolidaysPage />} />
+              <Route path="/faq" element={<FaqPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/admin" element={<RequireAuth admin><AdminPage /></RequireAuth>} />
             </Route>

@@ -1,0 +1,56 @@
+# Copies full-time employees' days off from Sodeco into the holiday planner.
+# Runs every night; "Run workflow" syncs right away. Until the Sodeco
+# certificate is added (README → "Connect Sodeco") it skips without failing.
+name: Sync Sodeco absences
+
+on:
+  schedule:
+    # 04:15 UTC = 05:15 or 06:15 in Brussels, before anyone opens the planner.
+    - cron: '15 4 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only show what would change (write nothing)'
+        type: boolean
+        default: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SODECO_CERT_PFX_BASE64: ${{ secrets.SODECO_CERT_PFX_BASE64 }}
+      SODECO_CERT_PASSWORD: ${{ secrets.SODECO_CERT_PASSWORD }}
+      SODECO_BASE_URL: ${{ vars.SODECO_BASE_URL }}
+      SODECO_EMPLOYER: ${{ vars.SODECO_EMPLOYER }}
+      SODECO_ABSENCES_PATH: ${{ vars.SODECO_ABSENCES_PATH }}
+      SODECO_TICKET_PATH: ${{ vars.SODECO_TICKET_PATH }}
+      SODECO_HEADERS: ${{ vars.SODECO_HEADERS }}
+      SODECO_ABSENCE_CODES: ${{ vars.SODECO_ABSENCE_CODES }}
+      SODECO_EXCLUDE_CODES: ${{ vars.SODECO_EXCLUDE_CODES }}
+    steps:
+      - name: Check the settings
+        id: check
+        run: |
+          if [ -z "$SODECO_CERT_PFX_BASE64" ] || [ -z "$SODECO_BASE_URL" ]; then
+            echo "::notice::Sodeco is not connected yet (secret SODECO_CERT_PFX_BASE64 or variable SODECO_BASE_URL is missing). Skipping."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          elif [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::Add the variable SUPABASE_URL and the secret SUPABASE_SERVICE_ROLE_KEY (see README)."
+            exit 1
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.ready == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.ready == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - if: steps.check.outputs.ready == 'true'
+        run: npm ci
+      - name: Sync
+        if: steps.check.outputs.ready == 'true'
+        run: node --experimental-strip-types --no-warnings scripts/sodeco-sync.mjs ${{ inputs.dry_run && '--dry-run' || '' }}
