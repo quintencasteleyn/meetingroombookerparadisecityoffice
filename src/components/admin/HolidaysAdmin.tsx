@@ -225,7 +225,8 @@ function WeeklyEmailCard({ settings, reload }: { settings: AppSettings; reload: 
             Send to everyone now
           </Button>
           <p className="text-xs text-muted">
-            The email is about next week. GitHub sends it on Fridays (see README: “Weekly holiday email”).
+            The email is about next week. The automatic Friday email starts once its schedule is switched on (see
+            README: “The weekly holiday email”).
           </p>
         </div>
       </div>

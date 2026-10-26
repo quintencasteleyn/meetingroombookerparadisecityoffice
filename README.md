@@ -170,6 +170,8 @@ From now on, Supabase sends confirmation and password-reset emails through your 
 
 Every Friday afternoon (15:00 Brussels time in summer, 14:00 in winter, because GitHub runs on UTC) GitHub asks the `holiday-digest` function to send the email about next week. A shared password, the `CRON_SECRET`, makes sure nobody else can trigger it.
 
+> **The Friday schedule is switched off for now.** Until it's switched on, nothing goes out automatically, even with `CRON_SECRET` set. To switch it on, add the `schedule` lines described at the top of `.github/workflows/weekly-holiday-email.yml`.
+
 1. **Make up a long random password** (at least 32 characters, letters and digits only), for example with your password manager. This is the `CRON_SECRET`. You don't need to remember it.
 2. **Supabase** → **Edge Functions → Secrets** → **Add new secret**: name `CRON_SECRET`, value = that password → **Save**.
 3. **GitHub** → this repository → **Settings → Secrets and variables → Actions** → **Secrets** tab → **New repository secret**: name `CRON_SECRET`, value = the **same** password → **Add secret**.
@@ -258,7 +260,7 @@ The days off of full-time employees come from Sodeco's **Link2Prisma** API ([doc
 | Recurring bookings | Weekdays, weekly, every 2 weeks, monthly (max 3 months) |
 | Changing bookings | Owners change or cancel their own; admins change, cancel or overrule all |
 | Days off | Freelancers add and change their own; admins anyone's; Sodeco days off only change in Sodeco |
-| Weekly email | Friday afternoons (14:00–15:00), about next week plus the 4 weeks after; once per week |
+| Weekly email | Friday afternoons (14:00–15:00), about next week plus the 4 weeks after; once per week. Schedule currently off |
 | Colours | Personal per account |
 
 ## Changing things later
@@ -270,7 +272,7 @@ The days off of full-time employees come from Sodeco's **Link2Prisma** API ([doc
 | Someone's work status | In the app: **Admin → Users** (dropdown). People on the employee list are always full-time |
 | Full-time employees and their Sodeco numbers | In the app: **Admin → Holidays** |
 | Weekly email on/off, recipients | In the app: **Admin → Holidays** |
-| Day and time of the weekly email | `cron` in `.github/workflows/weekly-holiday-email.yml` (in UTC) |
+| Weekly email schedule on/off, day and time | `schedule` / `cron` in `.github/workflows/weekly-holiday-email.yml` (in UTC; currently off) |
 | Number of weeks in the weekly email | `EXTRA_WEEKS` in `supabase/functions/_shared/digest.ts` |
 | Public holidays | `publicHolidays()` in `supabase/functions/_shared/holidays.ts` |
 | Allowed email domains / first admin | `handle_new_user()` in the newest SQL file that defines it, and `ALLOWED_DOMAINS` in `src/pages/AuthPages.tsx` |
