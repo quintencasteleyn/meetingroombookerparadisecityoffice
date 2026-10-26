@@ -5,6 +5,7 @@ import Logo from './Logo'
 import { Avatar } from './ui'
 import WorkTypePrompt from './WorkTypePrompt'
 import { useAuth } from '../context/AuthContext'
+import { ROOMS_ENABLED } from '../lib/features'
 
 export default function Shell() {
   const { profile, isAdmin, signOut } = useAuth()
@@ -40,9 +41,11 @@ export default function Shell() {
             <Logo compact />
           </Link>
           <nav className="flex items-center gap-0.5 sm:gap-1">
-            <NavLink to="/" end className={navClass} aria-label="Rooms">
-              <CalendarDays className="size-4" /> <span className={label}>Rooms</span>
-            </NavLink>
+            {ROOMS_ENABLED && (
+              <NavLink to="/" end className={navClass} aria-label="Rooms">
+                <CalendarDays className="size-4" /> <span className={label}>Rooms</span>
+              </NavLink>
+            )}
             <NavLink to="/holidays" className={navClass} aria-label="Holidays">
               <TreePalm className="size-4" /> <span className={label}>Holidays</span>
             </NavLink>
@@ -81,9 +84,11 @@ export default function Shell() {
                     </span>
                   )}
                 </div>
-                <MenuLink to="/" onClick={() => setMenuOpen(false)} icon={<CalendarDays className="size-4" />}>
-                  Meeting rooms
-                </MenuLink>
+                {ROOMS_ENABLED && (
+                  <MenuLink to="/" onClick={() => setMenuOpen(false)} icon={<CalendarDays className="size-4" />}>
+                    Meeting rooms
+                  </MenuLink>
+                )}
                 <MenuLink to="/holidays" onClick={() => setMenuOpen(false)} icon={<TreePalm className="size-4" />}>
                   Holiday planner
                 </MenuLink>

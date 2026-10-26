@@ -6,6 +6,7 @@ import { Alert, Button, Field, inputClass } from '../components/ui'
 import Logo from '../components/Logo'
 import WorkTypeChoice from '../components/WorkTypeChoice'
 import type { WorkType } from '../lib/types'
+import { ROOMS_ENABLED } from '../lib/features'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { supabase } from '../lib/supabase'
@@ -57,7 +58,9 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
           {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
           <div className="mt-6">{children}</div>
         </div>
-        <p className="mt-6 text-center text-xs text-muted">Meeting rooms and holidays · Paradise City office</p>
+        <p className="mt-6 text-center text-xs text-muted">
+          {ROOMS_ENABLED ? 'Meeting rooms and holidays' : 'Holiday planner'} · Paradise City office
+        </p>
       </div>
     </div>
   )
@@ -131,7 +134,10 @@ export function LoginPage() {
   }
 
   return (
-    <AuthLayout title="Sign in" subtitle="Book a meeting room or see who's off, in a few clicks.">
+    <AuthLayout
+      title="Sign in"
+      subtitle={ROOMS_ENABLED ? "Book a meeting room or see who's off, in a few clicks." : "See who's off, in a few clicks."}
+    >
       <form onSubmit={submit} className="space-y-4">
         {notice && <Alert tone="warning">{notice}</Alert>}
         <Field label="Work email">

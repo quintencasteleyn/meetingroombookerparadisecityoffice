@@ -17,7 +17,7 @@ function longDay(day: string): string {
 function sourceText(absence: Absence, person: Person | undefined): string {
   const type = person?.work_type ?? (absence.source === 'sodeco' ? 'employee' : null)
   const who = type === 'employee' ? 'Full-time' : type === 'freelancer' ? 'Freelancer' : 'Status not set'
-  const where = absence.source === 'sodeco' ? 'from Sodeco' : 'added in the app'
+  const where = absence.source === 'sodeco' ? 'from Sodiwe' : 'added in the app'
   return `${who} · ${where}`
 }
 

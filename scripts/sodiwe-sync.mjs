@@ -1,10 +1,10 @@
-// Copies full-time employees' days off from Sodeco (Link2Prisma) into the
-// holiday planner. Runs every night in GitHub Actions ("Sync Sodeco absences").
+// Copies full-time employees' days off from Sodiwe (Link2Prisma) into the
+// holiday planner. Runs every night in GitHub Actions ("Sync Sodiwe absences").
 //
-//   node --experimental-strip-types scripts/sodeco-sync.mjs              sync
-//   node --experimental-strip-types scripts/sodeco-sync.mjs --dry-run    show what would change, write nothing
-//   node --experimental-strip-types scripts/sodeco-sync.mjs --file answer.json
-//                                         use a saved Sodeco answer instead of calling Sodeco
+//   node --experimental-strip-types scripts/sodiwe-sync.mjs              sync
+//   node --experimental-strip-types scripts/sodiwe-sync.mjs --dry-run    show what would change, write nothing
+//   node --experimental-strip-types scripts/sodiwe-sync.mjs --file answer.json
+//                                         use a saved Sodiwe answer instead of calling Sodiwe
 //
 // It asks Link2Prisma for GET /absences/{startdate} (the approved absences of
 // all workers of an employer from that day on), waits for the result, matches
@@ -13,17 +13,17 @@
 // Settings (GitHub → Settings → Secrets and variables → Actions):
 //   SUPABASE_URL                variable: the Supabase Project URL
 //   SUPABASE_SERVICE_ROLE_KEY   secret: Supabase "service_role" / secret key
-//   SODECO_CERT_PFX_BASE64      secret: the certificate from Sodeco (.pfx/.p12), base64-encoded
-//   SODECO_CERT_PASSWORD        secret: the certificate's password
-//   SODECO_EMPLOYER             variable: employer number(s) in Prisma, comma-separated
-//   SODECO_BASE_URL             variable (optional): defaults to Sodeco's Link2Prisma address
-//   SODECO_ABSENCE_CODES        variable (optional): only these absence codes count (comma-separated)
-//   SODECO_EXCLUDE_CODES        variable (optional): these absence codes never count (e.g. sick leave)
+//   SODIWE_CERT_PFX_BASE64      secret: the certificate from Sodiwe (.pfx/.p12), base64-encoded
+//   SODIWE_CERT_PASSWORD        secret: the certificate's password
+//   SODIWE_EMPLOYER             variable: employer number(s) in Prisma, comma-separated
+//   SODIWE_BASE_URL             variable (optional): defaults to Sodiwe's Link2Prisma address
+//   SODIWE_ABSENCE_CODES        variable (optional): only these absence codes count (comma-separated)
+//   SODIWE_EXCLUDE_CODES        variable (optional): these absence codes never count (e.g. sick leave)
 
 import { readFileSync } from 'node:fs'
 import { createClient as createSupabase } from '@supabase/supabase-js'
-import { createClient, dataOfResult, fetchData } from './sodeco/client.mjs'
-import { parseAbsences, workerKey } from './sodeco/absences.mjs'
+import { createClient, dataOfResult, fetchData } from './sodiwe/client.mjs'
+import { parseAbsences, workerKey } from './sodiwe/absences.mjs'
 import { addDays, isWorkingDay } from '../supabase/functions/_shared/holidays.ts'
 
 const DAYS_BACK = 31
@@ -41,18 +41,18 @@ function todayInBrussels() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Brussels' }).format(new Date())
 }
 
-/** Asks Sodeco for every employer's approved absences from `from` on. */
-async function fetchFromSodeco(from) {
-  for (const name of ['SODECO_CERT_PFX_BASE64', 'SODECO_CERT_PASSWORD', 'SODECO_EMPLOYER']) {
-    if (!env[name]) throw new Error(`${name} is not set yet. See README → "Connect Sodeco".`)
+/** Asks Sodiwe for every employer's approved absences from `from` on. */
+async function fetchFromSodiwe(from) {
+  for (const name of ['SODIWE_CERT_PFX_BASE64', 'SODIWE_CERT_PASSWORD', 'SODIWE_EMPLOYER']) {
+    if (!env[name]) throw new Error(`${name} is not set yet. See README → "Connect Sodiwe".`)
   }
   const client = createClient({
-    baseUrl: env.SODECO_BASE_URL || DEFAULT_BASE_URL,
-    pfx: Buffer.from(env.SODECO_CERT_PFX_BASE64, 'base64'),
-    passphrase: env.SODECO_CERT_PASSWORD,
+    baseUrl: env.SODIWE_BASE_URL || DEFAULT_BASE_URL,
+    pfx: Buffer.from(env.SODIWE_CERT_PFX_BASE64, 'base64'),
+    passphrase: env.SODIWE_CERT_PASSWORD,
   })
   const answers = []
-  for (const employer of list(env.SODECO_EMPLOYER)) {
+  for (const employer of list(env.SODIWE_EMPLOYER)) {
     const data = await fetchData(client, `absences/${from.replaceAll('-', '')}`, employer, {
       log: (line) => console.log(`[${employer}] ${line}`),
     })
@@ -118,25 +118,25 @@ async function main() {
   }
 
   try {
-    // 1. Who is who: Sodeco worker number → email, from the employee list.
+    // 1. Who is who: Sodiwe worker number → email, from the employee list.
     const { data: staff, error: staffError } = await db
       .from('staff')
       .select('email, sodeco_worker_id, sodeco_employer')
       .eq('active', true)
       .not('sodeco_worker_id', 'is', null)
     if (staffError) throw staffError
-    if (!staff.length) throw new Error('Nobody on the employee list has a Sodeco number yet (Admin → Holidays).')
+    if (!staff.length) throw new Error('Nobody on the employee list has a Sodiwe number yet (Admin → Holidays).')
     const byWorker = new Map()
     for (const s of staff) {
       byWorker.set(workerKey(s.sodeco_employer ?? '', s.sodeco_worker_id), s.email)
       if (!s.sodeco_employer) byWorker.set(workerKey('*', s.sodeco_worker_id), s.email)
     }
 
-    // 2. Sodeco's absences (Sodeco only returns approved ones).
+    // 2. Sodiwe's absences (Sodiwe only returns approved ones).
     const answers = file
-      ? [{ employer: list(env.SODECO_EMPLOYER)[0] ?? '', data: readSavedAnswer(file) }]
-      : await fetchFromSodeco(from)
-    const options = { include: list(env.SODECO_ABSENCE_CODES), exclude: list(env.SODECO_EXCLUDE_CODES) }
+      ? [{ employer: list(env.SODIWE_EMPLOYER)[0] ?? '', data: readSavedAnswer(file) }]
+      : await fetchFromSodiwe(from)
+    const options = { include: list(env.SODIWE_ABSENCE_CODES), exclude: list(env.SODIWE_EXCLUDE_CODES) }
     const unmatched = new Set()
     const matched = []
     const codes = new Map()
@@ -151,7 +151,7 @@ async function main() {
         else unmatched.add(e.worker)
       }
     }
-    // Which absence codes Sodeco used, to decide which ones to leave out (SODECO_EXCLUDE_CODES).
+    // Which absence codes Sodiwe used, to decide which ones to leave out (SODIWE_EXCLUDE_CODES).
     console.log(
       `Absence codes found: ${[...codes].sort(([a], [b]) => Number(a) - Number(b)).map(([c, n]) => `${c} (${n}×)`).join(', ') || 'none'}`,
     )
@@ -170,7 +170,7 @@ async function main() {
       }))
     const unique = [...new Map(rows.map((r) => [r.external_id, r])).values()]
 
-    // 4. Sodeco's rows from today's window that Sodeco no longer has are removed.
+    // 4. Sodiwe's rows from today's window that Sodiwe no longer has are removed.
     const { data: existing, error: existingError } = await db
       .from('absences')
       .select('id, external_id, start_date')
@@ -187,13 +187,13 @@ async function main() {
     if (skippedCodes) message += `, ${skippedCodes} skipped because of their absence code`
     message += '.'
     if (unmatched.size) {
-      message += ` Sodeco numbers not on the employee list: ${[...unmatched].slice(0, 10).join(', ')}${unmatched.size > 10 ? '…' : ''}.`
+      message += ` Sodiwe numbers not on the employee list: ${[...unmatched].slice(0, 10).join(', ')}${unmatched.size > 10 ? '…' : ''}.`
     }
 
     if (dryRun) {
       console.log('Dry run, nothing written. First rows:')
       console.table(unique.slice(0, 25).map(({ person_email, start_date, end_date, day_part, status }) => ({ person_email, start_date, end_date, day_part, status })))
-      if (stale.length) console.log(`Would remove ${stale.length} rows that Sodeco no longer has.`)
+      if (stale.length) console.log(`Would remove ${stale.length} rows that Sodiwe no longer has.`)
       await report(true, message)
       return
     }

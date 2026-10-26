@@ -1,8 +1,8 @@
-# Copies full-time employees' days off from Sodeco into the holiday planner.
-# Runs every night; "Run workflow" syncs right away. Until the Sodeco
-# certificate is added (README → "Connect Sodeco") it skips without failing.
-# Sodeco handles requests through a queue, so a run can take a few minutes.
-name: Sync Sodeco absences
+# Copies full-time employees' days off from Sodiwe into the holiday planner.
+# Runs every night; "Run workflow" syncs right away. Until the Sodiwe
+# certificate is added (README → "Connect Sodiwe") it skips without failing.
+# Sodiwe handles requests through a queue, so a run can take a few minutes.
+name: Sync Sodiwe absences
 
 on:
   schedule:
@@ -22,18 +22,18 @@ jobs:
     env:
       SUPABASE_URL: ${{ vars.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      SODECO_CERT_PFX_BASE64: ${{ secrets.SODECO_CERT_PFX_BASE64 }}
-      SODECO_CERT_PASSWORD: ${{ secrets.SODECO_CERT_PASSWORD }}
-      SODECO_BASE_URL: ${{ vars.SODECO_BASE_URL }}
-      SODECO_EMPLOYER: ${{ vars.SODECO_EMPLOYER }}
-      SODECO_ABSENCE_CODES: ${{ vars.SODECO_ABSENCE_CODES }}
-      SODECO_EXCLUDE_CODES: ${{ vars.SODECO_EXCLUDE_CODES }}
+      SODIWE_CERT_PFX_BASE64: ${{ secrets.SODIWE_CERT_PFX_BASE64 }}
+      SODIWE_CERT_PASSWORD: ${{ secrets.SODIWE_CERT_PASSWORD }}
+      SODIWE_BASE_URL: ${{ vars.SODIWE_BASE_URL }}
+      SODIWE_EMPLOYER: ${{ vars.SODIWE_EMPLOYER }}
+      SODIWE_ABSENCE_CODES: ${{ vars.SODIWE_ABSENCE_CODES }}
+      SODIWE_EXCLUDE_CODES: ${{ vars.SODIWE_EXCLUDE_CODES }}
     steps:
       - name: Check the settings
         id: check
         run: |
-          if [ -z "$SODECO_CERT_PFX_BASE64" ]; then
-            echo "::notice::Sodeco is not connected yet (secret SODECO_CERT_PFX_BASE64 is missing). Skipping."
+          if [ -z "$SODIWE_CERT_PFX_BASE64" ]; then
+            echo "::notice::Sodiwe is not connected yet (secret SODIWE_CERT_PFX_BASE64 is missing). Skipping."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           elif [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
             echo "::error::Add the variable SUPABASE_URL and the secret SUPABASE_SERVICE_ROLE_KEY (see README)."
@@ -52,4 +52,4 @@ jobs:
         run: npm ci
       - name: Sync
         if: steps.check.outputs.ready == 'true'
-        run: node --experimental-strip-types --no-warnings scripts/sodeco-sync.mjs ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: node --experimental-strip-types --no-warnings scripts/sodiwe-sync.mjs ${{ inputs.dry_run && '--dry-run' || '' }}

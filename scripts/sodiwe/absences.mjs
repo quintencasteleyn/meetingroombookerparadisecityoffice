@@ -1,4 +1,4 @@
-// Turns Sodeco's answer to GET /absences/{startdate} into days off.
+// Turns Sodiwe's answer to GET /absences/{startdate} into days off.
 //
 // The format (Schemas/Absences.json in the Link2Prisma documentation):
 //   [ { "WorkerNumber": 1001,
@@ -24,13 +24,13 @@ export function workerKey(employer, worker) {
 }
 
 /**
- * All days off in Sodeco's answer: [{ worker, date, part }], one per worker and day.
+ * All days off in Sodiwe's answer: [{ worker, date, part }], one per worker and day.
  * include / exclude: absence codes (as text) that should / should never count.
  * Also returns how often each code occurred, to help decide which codes to leave out.
  */
 export function parseAbsences(data, { include = [], exclude = [] } = {}) {
   if (!Array.isArray(data)) {
-    throw new Error(`Expected a list of workers from Sodeco, got: ${JSON.stringify(data).slice(0, 200)}`)
+    throw new Error(`Expected a list of workers from Sodiwe, got: ${JSON.stringify(data).slice(0, 200)}`)
   }
   const codes = new Map()
   const days = new Map() // worker|date → { worker, date, hours, unknownHours }

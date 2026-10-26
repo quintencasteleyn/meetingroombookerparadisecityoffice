@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { useAdmins } from '../lib/holidays'
+import { ROOMS_ENABLED } from '../lib/features'
 
 function Question({ q, children, open = false }: { q: string; children: ReactNode; open?: boolean }) {
   return (
@@ -40,7 +41,9 @@ export default function FaqPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-2 px-4 py-6 sm:py-8">
       <h1 className="text-2xl font-semibold">Questions</h1>
-      <p className="text-sm text-muted">Short answers about your account, holidays and the meeting rooms.</p>
+      <p className="text-sm text-muted">
+        Short answers about your account{ROOMS_ENABLED ? ', holidays and the meeting rooms' : ' and the holiday planner'}.
+      </p>
 
       <Group title="Your account">
         <Question q="How do I change my status (full-time employee or freelancer)?" open>
@@ -49,7 +52,7 @@ export default function FaqPage() {
         </Question>
         <Question q="Why do I have to choose full-time employee or freelancer?">
           <p>
-            Full-time employees' days off come in automatically from Sodeco, our HR system. Freelancers aren't in Sodeco,
+            Full-time employees' days off come in automatically from Sodiwe, our HR system. Freelancers aren't in Sodiwe,
             so they add their own days off here. Your choice tells the planner where to look.
           </p>
         </Question>
@@ -64,8 +67,9 @@ export default function FaqPage() {
       <Group title="Holidays">
         <Question q="I'm a full-time employee. How do I book a holiday?">
           <p>
-            Request it in Sodeco, as you do today. Once it's approved, the holiday planner picks it up during the night,
-            so it shows up here the next morning.
+            Request it in Sodiwe, as you do today. Once it's approved, the holiday planner picks it up during the night,
+            so it shows up here the next morning. You can't add or change these days in the planner yourself: they always
+            come from Sodiwe.
           </p>
         </Question>
         <Question q="I'm a freelancer. How do I add my days off?">
@@ -77,13 +81,13 @@ export default function FaqPage() {
         <Question q="How do I change or remove days off I added?">
           <p>
             Click one of the days in the calendar, or look under “Your days off” on the right. Use the pencil to change
-            them or the bin to remove them. Days off that come from Sodeco can only be changed in Sodeco.
+            them or the bin to remove them. Days off that come from Sodiwe can only be changed in Sodiwe.
           </p>
         </Question>
         <Question q="Who can see my days off?">
           <p>
             Everyone with an account sees your name on the days you're off. Nobody sees why: the type of leave, sick
-            leave and balances stay in Sodeco.
+            leave and balances stay in Sodiwe.
           </p>
         </Question>
         <Question q="What is the weekly email?">
@@ -97,24 +101,26 @@ export default function FaqPage() {
         </Question>
         <Question q="My days off are missing or wrong.">
           <p>
-            Full-time employees: check Sodeco first. The planner copies it every night. Freelancers: change them
+            Full-time employees: check Sodiwe first. The planner copies it every night. Freelancers: change them
             yourself. Still not right? Ask one of the admins.
           </p>
           {adminList}
         </Question>
       </Group>
 
-      <Group title="Meeting rooms">
-        <Question q="How do I book a meeting room?">
-          <p>Open Rooms, then click or drag in the calendar. You can add guests and repeat a booking.</p>
-        </Question>
-        <Question q="The room I need is taken. What now?">
-          <p>
-            Click the booking to see which rooms are still free, ask the organiser to switch rooms, or join the waiting
-            list. When the booking is cancelled, the first person waiting gets the room automatically.
-          </p>
-        </Question>
-      </Group>
+      {ROOMS_ENABLED && (
+        <Group title="Meeting rooms">
+          <Question q="How do I book a meeting room?">
+            <p>Open Rooms, then click or drag in the calendar. You can add guests and repeat a booking.</p>
+          </Question>
+          <Question q="The room I need is taken. What now?">
+            <p>
+              Click the booking to see which rooms are still free, ask the organiser to switch rooms, or join the waiting
+              list. When the booking is cancelled, the first person waiting gets the room automatically.
+            </p>
+          </Question>
+        </Group>
+      )}
     </div>
   )
 }

@@ -10,6 +10,7 @@ import type { Role, Room, WorkType } from '../lib/types'
 import { appLink } from '../lib/mailto'
 import { ALLOWED_DOMAINS_TEXT } from './AuthPages'
 import HolidaysAdmin from '../components/admin/HolidaysAdmin'
+import { ROOMS_ENABLED } from '../lib/features'
 
 interface AdminUser {
   id: string
@@ -46,7 +47,9 @@ export default function AdminPage() {
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Admin</h1>
-          <p className="text-sm text-muted">Manage colleagues, the holiday planner and the meeting rooms.</p>
+          <p className="text-sm text-muted">
+            Manage colleagues{ROOMS_ENABLED ? ', the holiday planner and the meeting rooms' : ' and the holiday planner'}.
+          </p>
         </div>
         <div className="flex rounded-xl border border-line bg-surface p-1">
           {(
@@ -55,17 +58,19 @@ export default function AdminPage() {
               ['holidays', 'Holidays', TreePalm],
               ['rooms', 'Rooms', DoorOpen],
             ] as const
-          ).map(([id, label, Icon]) => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium sm:px-4 ${
-                tab === id ? 'bg-primary text-on-primary shadow-sm' : 'text-muted hover:text-fg'
-              }`}
-            >
-              <Icon className="size-4" /> {label}
-            </button>
-          ))}
+          )
+            .filter(([id]) => ROOMS_ENABLED || id !== 'rooms')
+            .map(([id, label, Icon]) => (
+              <button
+                key={id}
+                onClick={() => setTab(id)}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium sm:px-4 ${
+                  tab === id ? 'bg-primary text-on-primary shadow-sm' : 'text-muted hover:text-fg'
+                }`}
+              >
+                <Icon className="size-4" /> {label}
+              </button>
+            ))}
         </div>
       </div>
 
@@ -218,8 +223,8 @@ function UsersPanel() {
                     </p>
                     <p className="truncate text-xs text-muted">{u.email}</p>
                     <p className="text-xs text-muted">
-                      Last sign-in: {ago(u.last_sign_in_at)} · {u.upcoming_bookings} upcoming booking
-                      {u.upcoming_bookings === 1 ? '' : 's'}
+                      Last sign-in: {ago(u.last_sign_in_at)}
+                      {ROOMS_ENABLED && ` · ${u.upcoming_bookings} upcoming booking${u.upcoming_bookings === 1 ? '' : 's'}`}
                     </p>
                   </div>
                 </div>

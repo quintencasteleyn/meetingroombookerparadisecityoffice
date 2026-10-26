@@ -7,7 +7,7 @@ export const WORK_TYPE_LABEL: Record<WorkType, string> = {
 }
 
 const OPTIONS: { value: WorkType; text: string; icon: typeof UserRound }[] = [
-  { value: 'employee', text: 'Your days off come in automatically from Sodeco.', icon: BriefcaseBusiness },
+  { value: 'employee', text: 'Your days off come in automatically from Sodiwe.', icon: BriefcaseBusiness },
   { value: 'freelancer', text: 'You add your own days off in the holiday planner.', icon: UserRound },
 ]
 

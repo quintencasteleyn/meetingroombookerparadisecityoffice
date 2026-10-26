@@ -11,13 +11,16 @@ interface AbsenceDialogProps {
   existing: Absence | null
   defaultDate: string
   me: { email: string; full_name: string }
-  /** Admins can add days off for anyone. */
+  /** Admins can add days off for these people (the freelancers). */
   people: Person[] | null
 }
 
 export default function AbsenceDialog({ onClose, onSaved, existing, defaultDate, me, people }: AbsenceDialogProps) {
   const toast = useToast()
-  const [person, setPerson] = useState(existing?.person_email ?? me.email)
+  const [person, setPerson] = useState(
+    existing?.person_email ??
+      (people && !people.some((p) => p.email === me.email) ? (people[0]?.email ?? me.email) : me.email),
+  )
   const [from, setFrom] = useState(existing?.start_date ?? defaultDate)
   const [to, setTo] = useState(existing?.end_date ?? defaultDate)
   const [part, setPart] = useState<DayPart>(existing?.day_part ?? 'full')
@@ -74,14 +77,13 @@ export default function AbsenceDialog({ onClose, onSaved, existing, defaultDate,
           these days. Weekends and public holidays don't count.
         </p>
         {people && !existing && (
-          <Field label="Who">
+          <Field label="Freelancer" hint="Full-time employees' days off come from Sodiwe.">
             {(id) => (
               <select id={id} className={inputClass} value={person} onChange={(e) => setPerson(e.target.value)}>
                 {people.map((p) => (
                   <option key={p.email} value={p.email}>
                     {p.full_name}
                     {p.email === me.email ? ' (you)' : ''}
-                    {p.work_type === 'employee' ? ' · full-time' : p.work_type === 'freelancer' ? ' · freelancer' : ''}
                   </option>
                 ))}
               </select>
