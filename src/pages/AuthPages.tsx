@@ -4,6 +4,8 @@ import type { EmailOtpType } from '@supabase/supabase-js'
 import { Eye, EyeOff, MailCheck } from 'lucide-react'
 import { Alert, Button, Field, inputClass } from '../components/ui'
 import Logo from '../components/Logo'
+import WorkTypeChoice from '../components/WorkTypeChoice'
+import type { WorkType } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { supabase } from '../lib/supabase'
@@ -55,7 +57,7 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
           {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
           <div className="mt-6">{children}</div>
         </div>
-        <p className="mt-6 text-center text-xs text-muted">Meeting rooms · Paradise City office</p>
+        <p className="mt-6 text-center text-xs text-muted">Meeting rooms and holidays · Paradise City office</p>
       </div>
     </div>
   )
@@ -129,7 +131,7 @@ export function LoginPage() {
   }
 
   return (
-    <AuthLayout title="Sign in" subtitle="Book a meeting room in a few clicks.">
+    <AuthLayout title="Sign in" subtitle="Book a meeting room or see who's off, in a few clicks.">
       <form onSubmit={submit} className="space-y-4">
         {notice && <Alert tone="warning">{notice}</Alert>}
         <Field label="Work email">
@@ -183,6 +185,7 @@ export function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [workType, setWorkType] = useState<WorkType | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [sentTo, setSentTo] = useState<string | null>(null)
@@ -197,12 +200,13 @@ export function SignupPage() {
     if (!isAllowedEmail(cleanEmail)) return setError(`Please use your ${ALLOWED_DOMAINS_TEXT} email address.`)
     if (password.length < MIN_PASSWORD) return setError(`Your password needs at least ${MIN_PASSWORD} characters.`)
     if (password !== confirm) return setError("The passwords don't match.")
+    if (!workType) return setError('Choose whether you are a full-time employee or a freelancer.')
 
     setLoading(true)
     const { data, error: err } = await supabase.auth.signUp({
       email: cleanEmail,
       password,
-      options: { data: { full_name: fullName.trim() }, emailRedirectTo: redirectBase() },
+      options: { data: { full_name: fullName.trim(), work_type: workType }, emailRedirectTo: redirectBase() },
     })
     setLoading(false)
     if (err) return setError(authMessage(err.message))
@@ -269,10 +273,17 @@ export function SignupPage() {
         <Field label="Repeat password">
           {(id) => <PasswordInput id={id} value={confirm} onChange={setConfirm} autoComplete="new-password" />}
         </Field>
+        <fieldset>
+          <legend className="mb-1.5 block text-[13px] font-medium text-fg">
+            How do you work with us? <span className="text-red-500">*</span>
+          </legend>
+          <WorkTypeChoice value={workType} onChange={setWorkType} name="signup-work-type" />
+        </fieldset>
         {error && <Alert tone="error">{error}</Alert>}
         <Button type="submit" variant="primary" className="w-full" loading={loading}>
           Create account
         </Button>
+        <p className="text-center text-xs text-muted">Picked the wrong one? Ask an admin to change it later.</p>
       </form>
       <p className="mt-6 text-center text-sm text-muted">
         Already have an account?{' '}

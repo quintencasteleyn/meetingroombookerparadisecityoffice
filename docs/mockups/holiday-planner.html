@@ -1,0 +1,736 @@
+<title>Paradise City Holidays</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: the existing Paradise City app shell (header + tabs), holiday planner = month grids + day panel.
+   Tokens mirror src/index.css "Paradise blue"; dark mirrors the "Midnight" theme. */
+:root {
+  --bg: #f3f5fa;
+  --surface: #ffffff;
+  --surface-2: #f6f7f9;
+  --fg: #0f172a;
+  --muted: #64748b;
+  --line: rgba(15, 23, 42, 0.11);
+  --line-soft: rgba(15, 23, 42, 0.05);
+  --primary: #2563eb;
+  --primary-fg: #ffffff;
+  --primary-soft: rgba(37, 99, 235, 0.11);
+  --ft-bg: #dbe7fe;
+  --ft-fg: #1e40af;
+  --fl-bg: #ccf1ea;
+  --fl-fg: #0f6b5e;
+  --fl-solid: #0d9488;
+  --ph-bg: #fde8ec;
+  --ph-fg: #be123c;
+  --warn: #d97706;
+  --warn-bg: #fef3c7;
+  --frame: #1e293b;
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 24px -12px rgba(15, 23, 42, 0.12);
+  --font: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f172a; --surface: #172033; --surface-2: #1e293b; --fg: #e2e8f0; --muted: #94a3b8;
+    --line: rgba(255,255,255,0.12); --line-soft: rgba(255,255,255,0.05);
+    --primary: #60a5fa; --primary-fg: #0f172a; --primary-soft: rgba(96,165,250,0.16);
+    --ft-bg: rgba(96,165,250,0.2); --ft-fg: #bfdbfe; --fl-bg: rgba(45,212,191,0.18); --fl-fg: #99f6e4; --fl-solid: #2dd4bf;
+    --ph-bg: rgba(244,63,94,0.16); --ph-fg: #fda4af; --warn: #fbbf24; --warn-bg: rgba(251,191,36,0.16);
+    --frame: #475569; --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f172a; --surface: #172033; --surface-2: #1e293b; --fg: #e2e8f0; --muted: #94a3b8;
+  --line: rgba(255,255,255,0.12); --line-soft: rgba(255,255,255,0.05);
+  --primary: #60a5fa; --primary-fg: #0f172a; --primary-soft: rgba(96,165,250,0.16);
+  --ft-bg: rgba(96,165,250,0.2); --ft-fg: #bfdbfe; --fl-bg: rgba(45,212,191,0.18); --fl-fg: #99f6e4; --fl-solid: #2dd4bf;
+  --ph-bg: rgba(244,63,94,0.16); --ph-fg: #fda4af; --warn: #fbbf24; --warn-bg: rgba(251,191,36,0.16);
+  --frame: #475569; --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 14px; -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+
+/* ---------- presenter bar (not part of the app) ---------- */
+.demo {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px;
+  padding-block: 10px; padding-inline: 16px;
+  background: var(--surface); border-bottom: 1px dashed var(--line);
+  font-size: 12.5px;
+}
+.demo .tag { font-weight: 700; letter-spacing: .06em; text-transform: uppercase; font-size: 11px; color: var(--muted); }
+.demo .group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.demo .group > span { color: var(--muted); }
+.seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px; padding: 2px; gap: 2px; }
+.seg button { border: 0; background: transparent; padding: 4px 10px; border-radius: 7px; font-size: 12.5px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgba(15,23,42,.12); }
+
+.stage { padding-block: 20px 40px; padding-inline: 16px; }
+.device { margin: 0 auto; max-width: 1500px; background: var(--bg); border-radius: 16px; border: 1px solid var(--line); overflow: hidden; box-shadow: var(--shadow); }
+.device.phone { max-width: 390px; height: 800px; border: 10px solid var(--frame); border-radius: 46px; overflow-y: auto; overflow-x: hidden; }
+
+/* ---------- app ---------- */
+.app { container: app / inline-size; min-height: 100%; display: flex; flex-direction: column; }
+.top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 12px; height: 56px; padding-inline: 18px; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; letter-spacing: -0.01em; white-space: nowrap; }
+.logo b { color: var(--primary); font-weight: 600; }
+.nav { display: flex; gap: 4px; margin-left: 10px; }
+.nav button { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 6px 12px; border-radius: 8px; font-size: 14px; font-weight: 500; color: var(--muted); }
+.nav button:hover { background: var(--surface-2); color: var(--fg); }
+.nav button[aria-current="page"] { background: var(--primary-soft); color: var(--primary); }
+.nav svg, .tabbar svg { width: 16px; height: 16px; }
+.new { font-size: 10px; font-weight: 700; background: var(--primary); color: var(--primary-fg); border-radius: 5px; padding: 1px 5px; letter-spacing: .03em; }
+.user { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; }
+.avatar { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); font-size: 11.5px; font-weight: 700; flex: none; }
+.avatar.fl { background: var(--fl-bg); color: var(--fl-fg); }
+.tabbar { display: none; }
+
+.page { flex: 1; padding: 20px 20px 28px; display: flex; flex-direction: column; gap: 16px; }
+.page[hidden] { display: none !important; }
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.toolbar h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.toolbar .sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface); font-size: 14px; font-weight: 500; white-space: nowrap; }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--primary); color: var(--primary-fg); border-color: transparent; }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn.icon { width: 36px; padding: 0; justify-content: center; border-color: transparent; background: transparent; }
+.btn.icon:hover { background: var(--surface-2); }
+.btn svg { width: 16px; height: 16px; }
+.spacer { flex: 1; }
+select.input, input.input, textarea.input { height: 36px; border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 0 10px; font-size: 14px; }
+textarea.input { height: auto; padding: 8px 10px; resize: vertical; }
+.sync { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,.18); flex: none; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 12.5px; color: var(--muted); align-items: center; }
+.legend .chip { display: inline-block; }
+.legend .ph-sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--ph-bg); border: 1px solid var(--ph-fg); vertical-align: -2px; }
+.legend .busy-sw { display: inline-block; font-size: 10.5px; font-weight: 700; color: var(--warn); background: var(--warn-bg); border-radius: 5px; padding: 1px 5px; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+.months { display: grid; grid-template-columns: repeat(var(--count, 2), minmax(0, 1fr)); gap: 16px; align-items: start; }
+.month { container: month / inline-size; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); min-width: 0; }
+@container month (max-width: 560px) { .chip .last { display: none; } }
+.month h2 { font-size: 15px; font-weight: 600; padding: 12px 14px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: baseline; }
+.month h2 small { font-size: 12px; font-weight: 500; color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)) repeat(2, minmax(0, .6fr)); }
+.dow { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 8px 8px 6px; border-bottom: 1px solid var(--line); }
+.cell { position: relative; display: flex; flex-direction: column; gap: 2px; min-height: 104px; min-width: 0; padding: 6px; text-align: left; background: var(--surface); border: 0; border-right: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); }
+.cell:nth-child(7n) { border-right: 0; }
+.cell:hover:not(.blank) { background: var(--surface-2); }
+.cell.blank { background: var(--surface-2); opacity: .5; cursor: default; }
+.cell.weekend { background: var(--surface-2); }
+.cell.ph { background: var(--ph-bg); }
+.cell.sel { box-shadow: inset 0 0 0 2px var(--primary); z-index: 1; }
+.num { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 11px; font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; align-self: flex-start; margin-bottom: 2px; }
+.weekend .num { color: var(--muted); font-weight: 500; }
+.today .num { background: var(--primary); color: var(--primary-fg); padding: 0 6px; }
+.phl { font-size: 11px; font-weight: 600; color: var(--ph-fg); line-height: 1.2; }
+.busy { position: absolute; top: 7px; right: 6px; font-size: 10.5px; font-weight: 700; color: var(--warn); background: var(--warn-bg); border-radius: 5px; padding: 1px 5px; }
+.chip { display: block; font-size: 11.5px; line-height: 1.3; font-weight: 500; padding: 2px 6px; border-radius: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.chip.ft { background: var(--ft-bg); color: var(--ft-fg); }
+.chip.fl { background: var(--fl-bg); color: var(--fl-fg); }
+.chip.me.ft { background: var(--primary); color: var(--primary-fg); }
+.chip.me.fl { background: var(--fl-solid); color: var(--primary-fg); }
+.chip.pending { background: transparent; box-shadow: inset 0 0 0 1px currentColor; border-style: dashed; outline: 1px dashed currentColor; outline-offset: -1px; box-shadow: none; }
+.chip .half { font-size: 10px; opacity: .8; margin-left: 3px; font-weight: 600; }
+.more { font-size: 11px; color: var(--muted); font-weight: 600; padding-left: 4px; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+.panel section { padding: 14px 16px; border-bottom: 1px solid var(--line-soft); }
+.panel section:last-child { border-bottom: 0; }
+.panel h3 { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.panel .day { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 10px; }
+.who { display: flex; flex-direction: column; gap: 10px; }
+.person { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.person .meta { min-width: 0; }
+.person .nm { font-weight: 600; font-size: 13.5px; }
+.person .src { font-size: 12px; color: var(--muted); }
+.badge { display: inline-block; font-size: 10.5px; font-weight: 600; border-radius: 5px; padding: 1px 6px; margin-left: 4px; vertical-align: 1px; }
+.badge.pending { color: var(--warn); background: var(--warn-bg); }
+.empty { color: var(--muted); font-size: 13px; }
+.mine { display: flex; flex-direction: column; gap: 8px; }
+.mine .row { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 8px 10px; border-radius: 9px; background: var(--surface-2); }
+.mine .row b { font-weight: 600; }
+.mine .row .x { margin-left: auto; border: 0; background: transparent; color: var(--muted); font-size: 12px; font-weight: 600; padding: 2px 6px; border-radius: 6px; }
+.mine .row .x:hover { background: var(--ph-bg); color: var(--ph-fg); }
+.note { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+
+.why { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.why div { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.why b { display: block; font-size: 13.5px; margin-bottom: 4px; }
+.why p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+.section-label { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+
+/* sign-up */
+.auth { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 980px; width: 100%; margin: 0 auto; align-items: start; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; box-shadow: var(--shadow); min-width: 0; }
+.card h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin: 14px 0 4px; }
+.card .lead { color: var(--muted); font-size: 13.5px; margin: 0 0 18px; line-height: 1.5; }
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.field label, .field .lbl { font-size: 13px; font-weight: 600; }
+.field .input { width: 100%; }
+.req { color: var(--ph-fg); }
+.choice { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.choice label { display: flex; flex-direction: column; gap: 4px; border: 1.5px solid var(--line); border-radius: 12px; padding: 12px; cursor: pointer; background: var(--surface); }
+.choice label:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
+.choice input { accent-color: var(--primary); margin: 0 0 4px; }
+.choice b { font-size: 13.5px; }
+.choice span { font-size: 12px; color: var(--muted); line-height: 1.45; }
+.card .btn.primary { width: 100%; justify-content: center; height: 40px; }
+.hint { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
+
+/* admin */
+.subtabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.subtabs span { padding: 8px 12px; font-size: 13.5px; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.subtabs span.on { color: var(--primary); border-color: var(--primary); }
+.tablewrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 13.5px; }
+th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--line); }
+td { padding: 10px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+td .person .nm { font-size: 13.5px; }
+td select.input { height: 32px; font-size: 13px; }
+.ok { color: #16a34a; font-weight: 600; font-size: 12.5px; }
+.warn { color: var(--warn); font-weight: 600; font-size: 12.5px; }
+.dim { color: var(--muted); font-size: 12.5px; }
+.role { font-size: 11px; font-weight: 600; color: var(--primary); background: var(--primary-soft); padding: 2px 6px; border-radius: 5px; }
+.synccard { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); }
+.synccard .k { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.synccard .v { font-size: 14px; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+/* faq */
+.faq { max-width: 760px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+.faq h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.faq > p { color: var(--muted); margin: 0 0 6px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 0 16px; }
+summary { cursor: pointer; padding: 14px 0; font-weight: 600; font-size: 14.5px; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: '+'; color: var(--muted); font-weight: 500; font-size: 18px; line-height: 1; }
+details[open] summary::after { content: '–'; }
+details .a { padding: 0 0 14px; color: var(--muted); line-height: 1.6; font-size: 13.5px; max-width: 65ch; }
+details .a p { margin: 0 0 8px; }
+.mail { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--primary); background: var(--primary-soft); border-radius: 7px; padding: 2px 8px; user-select: all; }
+.faqtag { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 10px 0 0; }
+
+.rooms { background: var(--surface); border: 1px dashed var(--line); border-radius: 14px; padding: 32px; text-align: center; color: var(--muted); }
+
+/* dialog */
+.overlay { position: fixed; inset: 0; z-index: 60; background: rgba(15,23,42,.45); display: grid; place-items: center; padding: 16px; }
+.dialog { width: 100%; max-width: 420px; background: var(--surface); border-radius: 16px; padding: 22px; box-shadow: 0 24px 60px -12px rgba(0,0,0,.35); }
+.dialog h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.dialog .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.err { color: var(--ph-fg); font-size: 12.5px; margin: -6px 0 10px; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 70; background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 13.5px; font-weight: 500; box-shadow: var(--shadow); }
+
+/* ---------- narrow app (real phone, or the phone preview) ---------- */
+@container app (max-width: 1080px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+}
+@container app (max-width: 760px) {
+  .months { grid-template-columns: minmax(0, 1fr); }
+}
+@container app (max-width: 640px) {
+  .top { padding-inline: 14px; }
+  .nav, .user .nm { display: none; }
+  .page { padding: 14px 12px 84px; gap: 12px; }
+  .toolbar h1 { font-size: 19px; }
+  .toolbar .grow { flex-basis: 100%; }
+  .cell { min-height: 84px; padding: 4px 3px; }
+  .chip { font-size: 10.5px; padding: 1px 3px; border-radius: 4px; }
+  .chip .last, .chip .half { display: none; }
+  .busy { top: 5px; right: 3px; font-size: 9.5px; padding: 0 3px; }
+  .phl { font-size: 9.5px; }
+  .dow { padding: 6px 4px; font-size: 10px; letter-spacing: .02em; }
+  .choice { grid-template-columns: 1fr; }
+  .card { padding: 18px; }
+  .tabbar { display: grid; grid-template-columns: repeat(4, 1fr); position: sticky; bottom: 0; z-index: 20; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(8px); border-top: 1px solid var(--line); padding: 6px 4px 10px; }
+  .tabbar button { display: flex; flex-direction: column; align-items: center; gap: 3px; border: 0; background: transparent; font-size: 11px; font-weight: 500; color: var(--muted); padding: 4px 0; }
+  .tabbar button[aria-current="page"] { color: var(--primary); }
+  .tabbar svg { width: 20px; height: 20px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .dialog { animation: pop 180ms cubic-bezier(.2,.9,.3,1.2); }
+  @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+}
+</style>
+
+<div class="demo" role="region" aria-label="Mockup controls">
+  <span class="tag">Mockup · sample data</span>
+  <div class="group"><span>Screen</span>
+    <div class="seg" id="screenSeg">
+      <button data-screen="holidays" aria-pressed="true">Holiday planner</button>
+      <button data-screen="signup" aria-pressed="false">Sign-up</button>
+      <button data-screen="admin" aria-pressed="false">Admin</button>
+      <button data-screen="faq" aria-pressed="false">FAQ</button>
+    </div>
+  </div>
+  <div class="group"><span>Logged in as</span>
+    <div class="seg" id="viewerSeg">
+      <button data-viewer="quinten" aria-pressed="true">Quinten · full-time</button>
+      <button data-viewer="lucas" aria-pressed="false">Lucas · freelancer</button>
+    </div>
+  </div>
+  <div class="group"><span>Device</span>
+    <div class="seg" id="deviceSeg">
+      <button data-device="desktop" aria-pressed="true">Desktop</button>
+      <button data-device="phone" aria-pressed="false">Phone</button>
+    </div>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="device" id="device">
+    <div class="app">
+      <header class="top">
+        <span class="logo">
+          <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--primary)"/><rect x="7" y="9" width="18" height="16" rx="3" fill="none" stroke="var(--primary-fg)" stroke-width="2"/><path d="M7 14h18M12 6.5v4.5M20 6.5v4.5" stroke="var(--primary-fg)" stroke-width="2" stroke-linecap="round"/><rect x="11" y="17" width="5" height="4" rx="1" fill="var(--primary-fg)"/></svg>
+          <span>Paradise City <b>Office</b></span>
+        </span>
+        <nav class="nav" id="nav"></nav>
+        <div class="user"><span class="avatar" id="meAvatar">QC</span><span class="nm" id="meName">Quinten Casteleyn</span></div>
+      </header>
+
+      <!-- HOLIDAY PLANNER -->
+      <main class="page" id="screen-holidays">
+        <div class="toolbar">
+          <div class="grow">
+            <h1 id="rangeTitle">October – November 2026</h1>
+            <div class="sub">Who is off, by name, every day</div>
+          </div>
+          <div style="display:flex;gap:4px;align-items:center">
+            <button class="btn" id="todayBtn">Today</button>
+            <button class="btn icon" id="prevBtn" aria-label="Previous month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg></button>
+            <button class="btn icon" id="nextBtn" aria-label="Next month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg></button>
+          </div>
+          <div class="seg" id="countSeg">
+            <button data-count="1" aria-pressed="false">1 month</button>
+            <button data-count="2" aria-pressed="true">2 months</button>
+          </div>
+          <select class="input" id="filter" aria-label="Show">
+            <option value="all">Everyone</option>
+            <option value="ft">Full-time only</option>
+            <option value="fl">Freelancers only</option>
+          </select>
+          <span class="spacer"></span>
+          <span id="action"></span>
+        </div>
+
+        <div class="legend">
+          <span><span class="chip ft">Full-time</span> synced from Sodify</span>
+          <span><span class="chip fl">Freelancer</span> entered here</span>
+          <span><span class="chip ft me">You</span> solid = your days</span>
+          <span><span class="chip ft pending">Pending</span> waiting for approval</span>
+          <span><span class="ph-sw"></span> public holiday</span>
+          <span><span class="busy-sw">4 out</span> busy day</span>
+        </div>
+
+        <div class="layout">
+          <div class="months" id="months"></div>
+          <aside class="panel" id="panel"></aside>
+        </div>
+
+        <div class="section-label" style="margin-top:8px">Why this view</div>
+        <div class="why">
+          <div><b>Names on the day</b><p>You see who is off without clicking, hovering or opening a report.</p></div>
+          <div><b>Two months at once</b><p>Plan around overlaps and bridge days like 11 November. On a phone the months stack.</p></div>
+          <div><b>Everyone in one place</b><p>Full-time staff come in from Sodify automatically. Freelancers add their own days.</p></div>
+          <div><b>Only "off", never why</b><p>Colleagues see a name, not the leave type. Sick leave and balances stay in Sodify.</p></div>
+        </div>
+      </main>
+
+      <!-- ROOMS (existing) -->
+      <main class="page" id="screen-rooms" hidden>
+        <div class="rooms">
+          <p style="font-size:15px;font-weight:600;color:var(--fg);margin:0 0 6px">Meeting rooms</p>
+          <p style="margin:0">The room booking calendar that is live today. It moves under this tab, unchanged.</p>
+        </div>
+      </main>
+
+      <!-- SIGN-UP -->
+      <main class="page" id="screen-signup" hidden>
+        <div class="auth">
+          <form class="card" id="signupForm" novalidate>
+            <span class="logo"><svg width="36" height="36" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--primary)"/><rect x="7" y="9" width="18" height="16" rx="3" fill="none" stroke="var(--primary-fg)" stroke-width="2"/><path d="M7 14h18M12 6.5v4.5M20 6.5v4.5" stroke="var(--primary-fg)" stroke-width="2" stroke-linecap="round"/><rect x="11" y="17" width="5" height="4" rx="1" fill="var(--primary-fg)"/></svg><span>Paradise City <b>Office</b></span></span>
+            <h2>Create your account</h2>
+            <p class="lead">Use your @paradisecity.be or @touquetmusicbeach.com address.</p>
+            <div class="field"><label for="su-name">Full name</label><input class="input" id="su-name" value="Lucas Dubois"></div>
+            <div class="field"><label for="su-email">Work email</label><input class="input" id="su-email" value="lucas@paradisecity.be"></div>
+            <div class="field"><label for="su-pass">Password</label><input class="input" id="su-pass" type="password" value="paradise-demo"></div>
+            <div class="field">
+              <span class="lbl">How do you work with us? <span class="req">*</span></span>
+              <div class="choice" role="radiogroup">
+                <label><input type="radio" name="su-type" id="su-ft" value="ft"><b>Full-time employee</b><span>Your holidays come in automatically from Sodify.</span></label>
+                <label><input type="radio" name="su-type" id="su-fl" value="fl"><b>Freelancer</b><span>You add your own days off in the holiday planner.</span></label>
+              </div>
+            </div>
+            <p class="err" id="su-err" hidden>Choose full-time employee or freelancer to continue.</p>
+            <button class="btn primary" type="submit">Create account</button>
+            <p class="hint">Picked the wrong one? Ask an admin to change it. See the FAQ.</p>
+          </form>
+
+          <div class="card">
+            <span class="section-label">Colleagues who already have an account</span>
+            <h2>One quick question</h2>
+            <p class="lead">Shown once, the first time they log in after the holiday planner goes live.</p>
+            <div class="choice">
+              <label><input type="radio" name="ex-type" id="ex-ft" value="ft" checked><b>Full-time employee</b><span>Holidays from Sodify.</span></label>
+              <label><input type="radio" name="ex-type" id="ex-fl" value="fl"><b>Freelancer</b><span>I add my own days off.</span></label>
+            </div>
+            <div style="height:14px"></div>
+            <button class="btn primary" type="button" id="exSave">Save and continue</button>
+            <p class="hint">After this, only an admin can change it.</p>
+          </div>
+        </div>
+      </main>
+
+      <!-- ADMIN -->
+      <main class="page" id="screen-admin" hidden>
+        <div class="toolbar"><div class="grow"><h1>Admin</h1><div class="sub">Users, rooms and the holiday sync</div></div></div>
+        <div class="subtabs"><span class="on">Users</span><span>Rooms</span><span>Holiday sync</span></div>
+        <div class="synccard">
+          <div><div class="k">Sodify sync</div><div class="v"><span class="dot" style="display:inline-block;margin-right:6px"></span>Today 07:00</div></div>
+          <div><div class="k">Full-time matched</div><div class="v" id="matched">5 of 6</div></div>
+          <div><div class="k">Freelancers</div><div class="v" id="flCount">3</div></div>
+          <div><div class="k">Matched on</div><div class="v">Work email</div></div>
+          <span class="spacer"></span>
+          <button class="btn" id="syncNow">Sync now</button>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Colleague</th><th>Work status</th><th>Holidays come from</th><th>Role</th></tr></thead>
+            <tbody id="userRows"></tbody>
+          </table>
+        </div>
+      </main>
+
+      <!-- FAQ -->
+      <main class="page" id="screen-faq" hidden>
+        <div class="faq">
+          <h1>Questions</h1>
+          <p>Short answers about rooms, holidays and your account.</p>
+
+          <div class="faqtag">Your account</div>
+          <details open><summary>How do I change my status (full-time or freelancer)?</summary>
+            <div class="a"><p>Ask one of the admins. They can change it in Admin → Users.</p><p>Admins: <span class="mail">quinten@paradisecity.be</span></p></div></details>
+          <details><summary>Why do I have to choose full-time or freelancer?</summary>
+            <div class="a">Full-time employees' holidays come in automatically from Sodify. Freelancers aren't in Sodify, so they add their own days off here. Your choice tells the planner where to look.</div></details>
+          <details><summary>I forgot my password.</summary>
+            <div class="a">On the login page, click “Forgot password” and we'll email you a link.</div></details>
+
+          <div class="faqtag">Holidays</div>
+          <details><summary>I'm full-time. How do I book a holiday?</summary>
+            <div class="a">Request it in Sodify as you do today. Once it's approved it shows up in the planner after the next sync (every morning, or right away when an admin clicks “Sync now”). Requests waiting for approval show with a dashed outline.</div></details>
+          <details><summary>I'm a freelancer. How do I add my days off?</summary>
+            <div class="a">Open Holidays and click “Add days off”. Pick the dates, and a morning or afternoon if it's a half day. Your days appear for everyone straight away. To remove them, use “Your days off” on the right.</div></details>
+          <details><summary>Who can see my holidays?</summary>
+            <div class="a">Everyone with an account sees your name on the days you're off. Nobody sees why: leave types, sick leave and balances stay in Sodify.</div></details>
+          <details><summary>Are public holidays included?</summary>
+            <div class="a">Yes. Belgian public holidays are marked in the calendar and aren't counted as anyone's day off.</div></details>
+
+          <div class="faqtag">Meeting rooms</div>
+          <details><summary>How do I book a meeting room?</summary>
+            <div class="a">Open Rooms, then click or drag in the calendar. You can add guests, repeat a booking, or join the waiting list when a room is taken.</div></details>
+        </div>
+      </main>
+
+      <nav class="tabbar" id="tabbar"></nav>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <form class="dialog" id="addForm" novalidate>
+    <h2>Add days off</h2>
+    <p class="note" style="margin:0 0 16px">Colleagues will see your name on these days. Weekends and public holidays are skipped.</p>
+    <div class="row2">
+      <div class="field"><label for="f-from">From</label><input class="input" type="date" id="f-from" value="2026-11-23"></div>
+      <div class="field"><label for="f-to">To</label><input class="input" type="date" id="f-to" value="2026-11-25"></div>
+    </div>
+    <div class="field"><label for="f-half">Day</label>
+      <select class="input" id="f-half"><option value="">Full days</option><option value="AM">Morning only</option><option value="PM">Afternoon only</option></select></div>
+    <p class="err" id="f-err" hidden></p>
+    <div class="actions"><button class="btn" type="button" id="cancelAdd">Cancel</button><button class="btn primary" type="submit">Add days off</button></div>
+  </form>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const TODAY = '2026-10-12';
+const PEOPLE = {
+  quinten: { name: 'Quinten Casteleyn', email: 'quinten@paradisecity.be', type: 'ft', admin: true },
+  jan:     { name: 'Jan Peeters',       email: 'jan@paradisecity.be',     type: 'ft' },
+  sofie:   { name: 'Sofie Vermeulen',   email: 'sofie@paradisecity.be',   type: 'ft' },
+  lucas:   { name: 'Lucas Dubois',      email: 'lucas@paradisecity.be',   type: 'fl' },
+  emma:    { name: 'Emma Wouters',      email: 'emma@touquetmusicbeach.com', type: 'ft' },
+  thomas:  { name: 'Thomas Maes',       email: 'thomas@paradisecity.be',  type: 'fl' },
+  lotte:   { name: 'Lotte Claes',       email: 'lotte@paradisecity.be',   type: 'ft' },
+  arne:    { name: 'Arne Jacobs',       email: 'arne@touquetmusicbeach.com', type: 'fl' },
+  nina:    { name: 'Nina Goossens',     email: 'n.goossens@paradisecity.be', type: 'ft', noMatch: true },
+};
+let LEAVES = [
+  { p: 'sofie', from: '2026-09-28', to: '2026-10-02' },
+  { p: 'jan', from: '2026-10-05', to: '2026-10-09' },
+  { p: 'sofie', from: '2026-10-12', to: '2026-10-16' },
+  { p: 'emma', from: '2026-10-12', to: '2026-10-12', half: 'PM' },
+  { p: 'lucas', from: '2026-10-14', to: '2026-10-15' },
+  { p: 'emma', from: '2026-10-19', to: '2026-10-23' },
+  { p: 'thomas', from: '2026-10-21', to: '2026-10-23' },
+  { p: 'lotte', from: '2026-10-26', to: '2026-11-06' },
+  { p: 'lucas', from: '2026-10-26', to: '2026-10-30' },
+  { p: 'jan', from: '2026-10-29', to: '2026-10-30' },
+  { p: 'quinten', from: '2026-10-30', to: '2026-10-30' },
+  { p: 'arne', from: '2026-11-02', to: '2026-11-04' },
+  { p: 'nina', from: '2026-11-09', to: '2026-11-13', status: 'pending' },
+  { p: 'quinten', from: '2026-11-12', to: '2026-11-13' },
+  { p: 'thomas', from: '2026-11-16', to: '2026-11-20' },
+  { p: 'sofie', from: '2026-11-20', to: '2026-11-20', half: 'AM' },
+  { p: 'jan', from: '2026-11-23', to: '2026-11-27' },
+  { p: 'emma', from: '2026-12-21', to: '2026-12-24' },
+  { p: 'arne', from: '2026-12-21', to: '2026-12-31' },
+  { p: 'quinten', from: '2026-12-28', to: '2026-12-31' },
+];
+const PUBLIC = { '2026-11-01': "All Saints' Day", '2026-11-11': 'Armistice Day', '2026-12-25': 'Christmas Day', '2027-01-01': "New Year's Day" };
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DOW_LONG = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+const state = { y: 2026, m: 9, count: 2, filter: 'all', viewer: 'quinten', sel: TODAY, screen: 'holidays' };
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const utc = (iso) => { const [y, m, d] = iso.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); };
+const iso = (dt) => dt.toISOString().slice(0, 10);
+const dow = (dt) => (dt.getUTCDay() + 6) % 7;
+const initials = (n) => n.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+const first = (n) => n.split(' ')[0];
+const lastInitial = (n) => ' ' + (n.split(' ')[1] || '')[0] + '.';
+const fmtDay = (s) => { const d = utc(s); return `${DOW_LONG[dow(d)]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`; };
+const fmtShort = (s) => { const d = utc(s); return `${DOW[dow(d)]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()].slice(0, 3)}`; };
+
+function byDay() {
+  const map = {};
+  for (const l of LEAVES) {
+    for (let d = utc(l.from); d <= utc(l.to); d.setUTCDate(d.getUTCDate() + 1)) {
+      const k = iso(d);
+      if (dow(d) > 4 || PUBLIC[k]) continue;
+      (map[k] ||= []).push(l);
+    }
+  }
+  return map;
+}
+
+function chip(l) {
+  const p = PEOPLE[l.p];
+  const cls = ['chip', p.type, l.p === state.viewer ? 'me' : '', l.status === 'pending' ? 'pending' : ''].join(' ');
+  const half = l.half ? `<span class="half">${l.half}</span>` : '';
+  return `<span class="${cls}" title="${esc(p.name)}${l.half ? ' (' + l.half + ')' : ''}">${esc(first(p.name))}<span class="last">${esc(lastInitial(p.name))}</span>${half}</span>`;
+}
+
+function visible(list) {
+  return (list || []).filter((l) => state.filter === 'all' || PEOPLE[l.p].type === state.filter)
+    .sort((a, b) => (a.p === state.viewer ? -1 : b.p === state.viewer ? 1 : 0));
+}
+
+function monthHTML(y, m, days) {
+  const firstDay = new Date(Date.UTC(y, m, 1));
+  const lead = dow(firstDay);
+  const len = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  let workdays = 0, offDays = 0;
+  let cells = DOW.map((d) => `<div class="dow">${d}</div>`).join('');
+  for (let i = 0; i < lead; i++) cells += '<div class="cell blank" aria-hidden="true"></div>';
+  for (let d = 1; d <= len; d++) {
+    const dt = new Date(Date.UTC(y, m, d));
+    const k = iso(dt);
+    const we = dow(dt) > 4;
+    const ph = PUBLIC[k];
+    const list = visible(days[k]);
+    if (!we && !ph) { workdays++; offDays += list.length; }
+    const cls = ['cell', we ? 'weekend' : '', ph ? 'ph' : '', k === TODAY ? 'today' : '', k === state.sel ? 'sel' : ''].join(' ');
+    const shown = list.slice(0, 3).map(chip).join('');
+    const more = list.length > 3 ? `<span class="more">+${list.length - 3} more</span>` : '';
+    const busy = list.length >= 4 ? `<span class="busy">${list.length} out</span>` : '';
+    const label = `${fmtDay(k)}: ${ph ? ph : list.length ? list.length + ' off' : 'nobody off'}`;
+    cells += `<button class="${cls}" data-day="${k}" aria-label="${esc(label)}"><span class="num">${d}</span>${busy}${ph ? `<span class="phl">${esc(ph)}</span>` : ''}${shown}${more}</button>`;
+  }
+  const trail = (7 - ((lead + len) % 7)) % 7;
+  for (let i = 0; i < trail; i++) cells += '<div class="cell blank" aria-hidden="true"></div>';
+  return `<section class="month"><h2>${MONTHS[m]} ${y}<small>${offDays} days off · ${workdays} working days</small></h2><div class="grid">${cells}</div></section>`;
+}
+
+function renderCalendar() {
+  const days = byDay();
+  let html = '';
+  const titles = [];
+  for (let i = 0; i < state.count; i++) {
+    const d = new Date(Date.UTC(state.y, state.m + i, 1));
+    html += monthHTML(d.getUTCFullYear(), d.getUTCMonth(), days);
+    titles.push(d);
+  }
+  const a = titles[0], b = titles[titles.length - 1];
+  $('rangeTitle').textContent = state.count === 1 ? `${MONTHS[a.getUTCMonth()]} ${a.getUTCFullYear()}`
+    : a.getUTCFullYear() === b.getUTCFullYear() ? `${MONTHS[a.getUTCMonth()]} – ${MONTHS[b.getUTCMonth()]} ${b.getUTCFullYear()}`
+    : `${MONTHS[a.getUTCMonth()]} ${a.getUTCFullYear()} – ${MONTHS[b.getUTCMonth()]} ${b.getUTCFullYear()}`;
+  const months = $('months');
+  months.style.setProperty('--count', state.count);
+  months.innerHTML = html;
+  renderPanel(days);
+}
+
+function personRow(l) {
+  const p = PEOPLE[l.p];
+  const src = p.type === 'ft' ? 'Full-time · from Sodify' : 'Freelancer · entered here';
+  const half = l.half ? (l.half === 'AM' ? ' · morning' : ' · afternoon') : '';
+  const pend = l.status === 'pending' ? '<span class="badge pending">Pending</span>' : '';
+  return `<div class="person"><span class="avatar ${p.type}">${initials(p.name)}</span><div class="meta"><div class="nm">${esc(p.name)}${l.p === state.viewer ? ' (you)' : ''}${pend}</div><div class="src">${src}${half}</div></div></div>`;
+}
+
+function renderPanel(days) {
+  const k = state.sel;
+  const dt = utc(k);
+  const we = dow(dt) > 4;
+  const ph = PUBLIC[k];
+  const list = visible(days[k]);
+  let body;
+  if (ph) body = `<p class="empty">${esc(ph)}. The office is closed.</p>`;
+  else if (we) body = '<p class="empty">Weekend.</p>';
+  else if (!list.length) body = '<p class="empty">Nobody is off. Everyone is in.</p>';
+  else body = `<div class="who">${list.map(personRow).join('')}</div>`;
+
+  // this week (Mon-Fri around TODAY)
+  const t = utc(TODAY); const mon = new Date(t); mon.setUTCDate(t.getUTCDate() - dow(t));
+  const week = new Map();
+  for (let i = 0; i < 5; i++) { const d = new Date(mon); d.setUTCDate(mon.getUTCDate() + i); for (const l of visible(days[iso(d)])) week.set(l.p, (week.get(l.p) || 0) + (l.half ? 0.5 : 1)); }
+  const weekHTML = week.size ? [...week].map(([p, n]) => `<div class="person"><span class="avatar ${PEOPLE[p].type}">${initials(PEOPLE[p].name)}</span><div class="meta"><div class="nm">${esc(PEOPLE[p].name)}</div><div class="src">${n} ${n === 1 ? 'day' : 'days'} this week</div></div></div>`).join('') : '<p class="empty">Nobody off this week.</p>';
+
+  const me = PEOPLE[state.viewer];
+  const mine = LEAVES.map((l, i) => ({ ...l, i })).filter((l) => l.p === state.viewer && l.to >= TODAY).sort((a, b) => a.from.localeCompare(b.from));
+  const range = (l) => l.from === l.to ? fmtShort(l.from) + (l.half ? ` (${l.half === 'AM' ? 'morning' : 'afternoon'})` : '') : `${fmtShort(l.from)} – ${fmtShort(l.to)}`;
+  const mineHTML = mine.length ? mine.map((l) => `<div class="row"><b>${range(l)}</b>${me.type === 'fl' ? `<button class="x" data-del="${l.i}" aria-label="Remove ${range(l)}">Remove</button>` : ''}</div>`).join('') : '<p class="empty">No days off planned.</p>';
+  const mineNote = me.type === 'ft' ? '<p class="note" style="margin:8px 0 0">These come from Sodify. To change them, use Sodify.</p>' : '';
+
+  $('panel').innerHTML = `
+    <section><h3>${k === TODAY ? 'Off today' : 'Off on'}</h3><div class="day">${fmtDay(k)}</div>${body}</section>
+    <section><h3>This week</h3><div class="who">${weekHTML}</div></section>
+    <section><h3>Your days off</h3><div class="mine">${mineHTML}</div>${mineNote}</section>`;
+}
+
+function renderAction() {
+  const me = PEOPLE[state.viewer];
+  $('action').innerHTML = me.type === 'fl'
+    ? '<button class="btn primary" id="addBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add days off</button>'
+    : '<span class="sync"><span class="dot"></span>Your holidays sync from Sodify · today 07:00</span>';
+}
+
+const ICONS = {
+  rooms: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+  holidays: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 0 1 9 9H3a9 9 0 0 1 9-9Z"/><path d="M12 12v8a2 2 0 0 0 4 0"/></svg>',
+  faq: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></svg>',
+  admin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>',
+};
+function renderNav() {
+  const tabs = [['rooms', 'Rooms'], ['holidays', 'Holidays'], ['faq', 'FAQ']];
+  if (PEOPLE[state.viewer].admin) tabs.push(['admin', 'Admin']);
+  const cur = state.screen === 'signup' ? '' : state.screen;
+  $('nav').innerHTML = tabs.map(([k, t]) => `<button data-go="${k}" ${cur === k ? 'aria-current="page"' : ''}>${ICONS[k]}${t}${k === 'holidays' ? ' <span class="new">NEW</span>' : ''}</button>`).join('');
+  $('tabbar').innerHTML = tabs.map(([k, t]) => `<button data-go="${k}" ${cur === k ? 'aria-current="page"' : ''}>${ICONS[k]}${t}</button>`).join('');
+  $('tabbar').style.gridTemplateColumns = `repeat(${tabs.length}, 1fr)`;
+}
+
+function renderUsers() {
+  const rows = Object.entries(PEOPLE).map(([id, p]) => {
+    const src = p.type === 'fl' ? '<span class="dim">Enters own days off</span>'
+      : p.noMatch ? '<span class="warn">Not found in Sodify (email differs)</span>'
+      : '<span class="ok">Sodify · linked</span>';
+    return `<tr><td><div class="person"><span class="avatar ${p.type}">${initials(p.name)}</span><div class="meta"><div class="nm">${esc(p.name)}</div><div class="src">${esc(p.email)}</div></div></div></td>
+      <td><select class="input" data-status="${id}" aria-label="Work status of ${esc(p.name)}"><option value="ft" ${p.type === 'ft' ? 'selected' : ''}>Full-time employee</option><option value="fl" ${p.type === 'fl' ? 'selected' : ''}>Freelancer</option></select></td>
+      <td>${src}</td><td>${p.admin ? '<span class="role">Admin</span>' : '<span class="dim">Member</span>'}</td></tr>`;
+  }).join('');
+  $('userRows').innerHTML = rows;
+  const ft = Object.values(PEOPLE).filter((p) => p.type === 'ft');
+  $('matched').textContent = `${ft.filter((p) => !p.noMatch).length} of ${ft.length}`;
+  $('flCount').textContent = Object.values(PEOPLE).filter((p) => p.type === 'fl').length;
+}
+
+function setPressed(segId, attr, val) {
+  document.querySelectorAll(`#${segId} button`).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset[attr] === String(val))));
+}
+function go(screen) {
+  if (screen === 'admin' && !PEOPLE[state.viewer].admin) screen = 'holidays';
+  state.screen = screen;
+  for (const s of ['holidays', 'rooms', 'signup', 'admin', 'faq']) $('screen-' + s).hidden = s !== screen;
+  setPressed('screenSeg', 'screen', screen);
+  renderNav();
+  document.getElementById('device').scrollTop = 0;
+}
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => { t.hidden = true; }, 2600);
+}
+function renderAll() {
+  const me = PEOPLE[state.viewer];
+  $('meName').textContent = me.name;
+  $('meAvatar').textContent = initials(me.name);
+  $('meAvatar').className = 'avatar ' + me.type;
+  renderNav(); renderAction(); renderCalendar(); renderUsers();
+}
+
+// ---- events ----
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('button');
+  if (!t) return;
+  if (t.dataset.screen) go(t.dataset.screen);
+  else if (t.dataset.go) go(t.dataset.go);
+  else if (t.dataset.viewer) { state.viewer = t.dataset.viewer; setPressed('viewerSeg', 'viewer', state.viewer); if (state.screen === 'admin' && !PEOPLE[state.viewer].admin) go('holidays'); renderAll(); }
+  else if (t.dataset.device) { setPressed('deviceSeg', 'device', t.dataset.device); $('device').classList.toggle('phone', t.dataset.device === 'phone'); }
+  else if (t.dataset.count) { state.count = Number(t.dataset.count); setPressed('countSeg', 'count', state.count); renderCalendar(); }
+  else if (t.dataset.day) { state.sel = t.dataset.day; renderCalendar(); }
+  else if (t.dataset.del) { LEAVES.splice(Number(t.dataset.del), 1); renderCalendar(); toast('Days off removed'); }
+  else if (t.id === 'prevBtn' || t.id === 'nextBtn') { const d = new Date(Date.UTC(state.y, state.m + (t.id === 'prevBtn' ? -1 : 1), 1)); state.y = d.getUTCFullYear(); state.m = d.getUTCMonth(); renderCalendar(); }
+  else if (t.id === 'todayBtn') { state.y = 2026; state.m = 9; state.sel = TODAY; renderCalendar(); }
+  else if (t.id === 'addBtn') { $('f-err').hidden = true; $('overlay').hidden = false; $('f-from').focus(); }
+  else if (t.id === 'cancelAdd') { $('overlay').hidden = true; }
+  else if (t.id === 'syncNow') { toast('Synced with Sodify · 5 employees, 0 changes'); }
+  else if (t.id === 'exSave') { toast('Saved. Welcome to the holiday planner.'); }
+});
+$('overlay').addEventListener('click', (e) => { if (e.target === $('overlay')) $('overlay').hidden = true; });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('overlay').hidden = true; });
+$('filter').addEventListener('change', (e) => { state.filter = e.target.value; renderCalendar(); });
+document.addEventListener('change', (e) => {
+  const id = e.target.dataset && e.target.dataset.status;
+  if (!id) return;
+  PEOPLE[id].type = e.target.value;
+  renderAll();
+  toast(`${PEOPLE[id].name} is now ${e.target.value === 'ft' ? 'a full-time employee' : 'a freelancer'}`);
+});
+$('addForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const from = $('f-from').value, to = $('f-to').value, half = $('f-half').value;
+  const err = $('f-err');
+  if (!from || !to) { err.textContent = 'Pick a start and end date.'; err.hidden = false; return; }
+  if (to < from) { err.textContent = 'The end date is before the start date.'; err.hidden = false; return; }
+  if (half && from !== to) { err.textContent = 'A half day has to be a single date.'; err.hidden = false; return; }
+  LEAVES.push({ p: state.viewer, from, to, half: half || undefined });
+  $('overlay').hidden = true;
+  const d = utc(from); state.y = d.getUTCFullYear(); state.m = d.getUTCMonth(); state.sel = from;
+  renderCalendar();
+  toast('Days off added. Your colleagues can see them now.');
+});
+$('signupForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const picked = document.querySelector('input[name="su-type"]:checked');
+  $('su-err').hidden = !!picked;
+  if (picked) toast(`Account created as ${picked.value === 'ft' ? 'full-time employee' : 'freelancer'}`);
+});
+
+renderAll();
+</script>

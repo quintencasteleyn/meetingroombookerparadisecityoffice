@@ -1,6 +1,6 @@
 // Email layout, Brussels-time formatting and calendar (.ics) files.
 
-export const APP_NAME = 'Paradise City Rooms'
+export const APP_NAME = 'Paradise City Office'
 const TZ = 'Europe/Brussels'
 
 const dateFmt = new Intl.DateTimeFormat('en-GB', {
@@ -42,6 +42,8 @@ export interface LayoutOptions {
   details?: [string, string][]
   /** Optional list of dates (escaped here). */
   list?: string[]
+  /** Already-escaped HTML placed after the paragraphs (e.g. tables). */
+  sections?: string
   button?: { text: string; url: string }
   footnote?: string
 }
@@ -80,10 +82,10 @@ export function layout(o: LayoutOptions): string {
         <tr><td style="padding:24px">
           <h1 style="margin:0 0 12px;font-size:20px;color:#0f172a">${escapeHtml(o.heading)}</h1>
           ${o.paragraphs.map((p) => `<p style="margin:0 0 12px;color:#334155;font-size:15px;line-height:1.55">${p}</p>`).join('')}
-          ${details}${list}${button}${footnote}
+          ${details}${list}${o.sections ?? ''}${button}${footnote}
         </td></tr>
       </table>
-      <p style="color:#94a3b8;font-size:12px;margin:16px 0 0">Sent by ${APP_NAME} · Paradise City office</p>
+      <p style="color:#94a3b8;font-size:12px;margin:16px 0 0">Sent by ${APP_NAME}</p>
     </td></tr>
   </table>
 </body></html>`

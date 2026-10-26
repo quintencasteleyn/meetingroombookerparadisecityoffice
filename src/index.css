@@ -62,3 +62,32 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .fade-in, .dialog-in, .toast-in { animation: none; }
 }
+
+/* Holiday planner chips. Full-time employees use the colleague's own
+   theme colour, freelancers teal; both stay readable on dark themes
+   because the text colour is mixed with the theme's text colour. */
+.chip-employee {
+  background: color-mix(in srgb, var(--primary) 15%, var(--surface));
+  color: color-mix(in srgb, var(--primary) 78%, var(--fg));
+}
+.chip-freelancer {
+  background: color-mix(in srgb, #14b8a6 18%, var(--surface));
+  color: color-mix(in srgb, #0d9488 72%, var(--fg));
+}
+.chip-unknown {
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.chip-employee.chip-me {
+  background: var(--primary);
+  color: var(--primary-fg);
+}
+.chip-freelancer.chip-me {
+  background: #0d9488;
+  color: #ffffff;
+}
+.chip-requested {
+  background: transparent;
+  outline: 1px dashed currentColor;
+  outline-offset: -1px;
+}
