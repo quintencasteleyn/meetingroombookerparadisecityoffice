@@ -113,7 +113,8 @@ export default function Shell() {
       <main>
         <Outlet />
       </main>
-      {profile && !profile.work_type && <WorkTypePrompt />}
+      {/* Only once the holiday planner SQL has run does the profile have work_type (null = not chosen yet). */}
+      {profile && profile.work_type === null && <WorkTypePrompt />}
     </div>
   )
 }

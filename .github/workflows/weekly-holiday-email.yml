@@ -19,8 +19,12 @@ jobs:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          if [ -z "$CRON_SECRET" ] || [ -z "$SUPABASE_URL" ]; then
-            echo "::error::Add the secret CRON_SECRET and the variable SUPABASE_URL first (see README, holiday planner setup)."
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::notice::The weekly email isn't set up yet (secret CRON_SECRET is missing, see README step 9). Skipping."
+            exit 0
+          fi
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "::error::Add the variable SUPABASE_URL (see README)."
             exit 1
           fi
           response=$(curl -sS --fail-with-body -X POST "$SUPABASE_URL/functions/v1/holiday-digest" \

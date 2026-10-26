@@ -22,22 +22,22 @@ Deno.serve(async (req) => {
     const body = (await req.json()) as { action?: Action; userId?: string; role?: string; workType?: string }
 
     if (body.action === 'list') {
-      const [
-        { data: profiles, error: pErr },
-        { data: authData, error: aErr },
-        { data: upcoming, error: bErr },
-        { data: staff, error: sErr },
-      ] = await Promise.all([
-        admin.from('profiles').select('id, email, full_name, role, blocked, work_type, created_at').order('full_name'),
-        admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
-        admin.from('bookings').select('user_id').is('cancelled_at', null).gt('ends_at', new Date().toISOString()),
-        admin.from('staff').select('email').eq('active', true),
-      ])
+      const [profileResult, { data: authData, error: aErr }, { data: upcoming, error: bErr }, staffResult] =
+        await Promise.all([
+          admin.from('profiles').select('id, email, full_name, role, blocked, work_type, created_at').order('full_name'),
+          admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+          admin.from('bookings').select('user_id').is('cancelled_at', null).gt('ends_at', new Date().toISOString()),
+          admin.from('staff').select('email').eq('active', true),
+        ])
+      // Until the holiday planner SQL has run, work_type and the employee list don't exist yet.
+      const { data: profiles, error: pErr } =
+        profileResult.error?.code === '42703'
+          ? await admin.from('profiles').select('id, email, full_name, role, blocked, created_at').order('full_name')
+          : profileResult
       if (pErr) throw pErr
       if (aErr) throw aErr
       if (bErr) throw bErr
-      if (sErr) throw sErr
-      const onList = new Set((staff ?? []).map((s) => s.email))
+      const onList = new Set((staffResult.error ? [] : (staffResult.data ?? [])).map((s) => s.email))
 
       const authById = new Map(authData.users.map((u) => [u.id, u]))
       const counts = new Map<string, number>()
