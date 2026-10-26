@@ -64,8 +64,8 @@ export default function FaqPage() {
       <Group title="Holidays">
         <Question q="I'm a full-time employee. How do I book a holiday?">
           <p>
-            Request it in Sodeco, as you do today. The holiday planner picks it up every night, so it shows up here the
-            next morning. Requests that aren't approved yet have a dashed outline.
+            Request it in Sodeco, as you do today. Once it's approved, the holiday planner picks it up during the night,
+            so it shows up here the next morning.
           </p>
         </Question>
         <Question q="I'm a freelancer. How do I add my days off?">

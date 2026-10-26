@@ -196,14 +196,18 @@ Freelancers don't go on this list. They create an account and choose *Freelancer
 
 ### 11. Connect Sodeco
 
-The days off of full-time employees come from Sodeco's **Link2Prisma** API. We only *read* from it. A GitHub Action (**Sync Sodeco absences**) runs every night at about 05:15 and copies the absences of the last month and the next year into the planner.
+The days off of full-time employees come from Sodeco's **Link2Prisma** API ([documentation](https://link2prisma.sodeco.info/documentation/): the manual `MO_Link2Prisma_EN.pdf` and `Schemas/Absences.json`). We only *read* from it. A GitHub Action (**Sync Sodeco absences**) runs every night at about 05:15. It:
+
+1. asks Link2Prisma for `GET /absences/{date}` (the **approved** absences of all workers of your employer, from a month ago on), with the header `Employer` = your employer number;
+2. waits while Sodeco's queue handles the request (`GET /Result/{id}`, usually a few minutes);
+3. matches the Sodeco worker numbers to the employee list and stores the days off as periods: one day per absence, several days in a row (also across a weekend or public holiday) become one period, and up to 4.5 hours on a day counts as half a day.
 
 **What to ask Sodeco (reply to their email):**
 
-- “The API on our side is ready. Please create the certificate.” They will send a certificate file (`.pfx` or `.p12`) and its **password**. Ask for it to have read access to **absences** for our employer number(s).
-- The **address (base URL)** of the API and the exact request for the absences (the *absences* call from the documentation), including how the employer number is passed.
-- Whether the API **only accepts certain IP addresses**. GitHub's servers don't have a fixed IP address, so if Sodeco requires one, the sync has to run from a machine with a fixed address instead. Find this out before connecting.
-- Which **absence codes** are holidays, so we can leave out sick leave if you want.
+- “The connection on our side is ready. Please create the certificate.” They send a certificate file (`.pfx` or `.p12`) and its **password**. Ask for read access to the absences of your employer number(s).
+- Whether the API **only accepts certain IP addresses**. GitHub's servers don't have a fixed IP address, so if Sodeco requires one, the sync has to run from a machine with a fixed address instead.
+- Whether `https://link2prisma.sodeco.info/link2prisma.svc` (the address in the manual) is also the address for live data.
+- Whether your employees' holidays are registered in the **absence calendar** in Prisma. Only those come through the API.
 
 **Put the certificate in GitHub:**
 
@@ -222,19 +226,21 @@ The days off of full-time employees come from Sodeco's **Link2Prisma** API. We o
 
    | Name | Value |
    |---|---|
-   | `SODECO_BASE_URL` | the API address from Sodeco |
-   | `SODECO_EMPLOYER` | your employer number in Prisma (more than one: separate with commas) |
-   | `SODECO_ABSENCES_PATH` | *(only if it differs)* the absences request after the base URL, with `{employer}`, `{from}` and `{to}` where those go. Default: `absences?employer={employer}&from={from}&to={to}` |
-   | `SODECO_TICKET_PATH` | *(only if Sodeco answers with a ticket)* where to fetch the result, with `{ticket}`, e.g. `tickets/{ticket}` |
-   | `SODECO_HEADERS` | *(only if needed)* extra headers as JSON, e.g. `{"Employer": "{employer}"}` |
-   | `SODECO_EXCLUDE_CODES` | *(optional)* absence codes that should never show, e.g. sick leave codes, separated by commas |
+   | `SODECO_EMPLOYER` | your employer number in Prisma (the *external number* of the employer). More than one: separate with commas |
+   | `SODECO_BASE_URL` | *(only if Sodeco gives you another address)* default: `https://link2prisma.sodeco.info/link2prisma.svc` |
+   | `SODECO_EXCLUDE_CODES` | *(optional)* absence codes that should never show, e.g. the sick-leave codes, separated by commas |
    | `SODECO_ABSENCE_CODES` | *(optional)* if set, **only** these absence codes show |
 
-**Try it without writing anything:** GitHub → **Actions** → **Sync Sodeco absences** → **Run workflow** → tick *Only show what would change* → **Run workflow**. Open the run → *Sync* to see the days off it found and which Sodeco numbers it couldn't match.
+**Try it without writing anything:** GitHub → **Actions** → **Sync Sodeco absences** → **Run workflow** → tick *Only show what would change* → **Run workflow**. Open the run → *Sync*. It shows the days off it found, which **absence codes** Sodeco used (with how often), and which Sodeco numbers it couldn't match to the employee list. Use the codes to decide whether to fill in `SODECO_EXCLUDE_CODES`.
 
 **Then for real:** run it again without the tick. **Admin → Holidays → Sodeco connection** now shows the last sync. From now on it runs every night by itself. If you had switched on *Let full-time employees add their own days off too*, switch it off now, so days off aren't counted twice.
 
-> If the run says it “could not find the worker number” or “any dates”, Sodeco uses other field names than the usual ones. The message lists them. Add them to `FIELDS` at the top of `scripts/sodeco/absences.mjs`.
+| The run says | What to do |
+|---|---|
+| *Sodeco answered 403 … did not accept the certificate* | The certificate is missing, wrong or expired. Check the two certificate secrets, or ask Sodeco. |
+| *401 … no access to this employer* | The certificate's user has no rights on that employer number. Ask Sodeco to add them. |
+| *404 The given Employer is not found* | `SODECO_EMPLOYER` is wrong. |
+| *did not finish the request within 15 minutes* | Sodeco's queue was slow. The next night's run tries again, or start it again by hand. |
 
 ---
 
@@ -292,7 +298,7 @@ Changes to the SQL go in a **new** file in `supabase/migrations/`, which you run
 | The Holidays page is empty or shows an error | The file `20261016000000_holiday_planner.sql` hasn't been run yet (step 2). |
 | **Preview** / **Send me a test** gives an error | The `holiday-digest` function isn't deployed (step 5), or the Microsoft secrets are missing (step 6). |
 | **Weekly holiday email** action fails with *Wrong CRON_SECRET* | The `CRON_SECRET` in GitHub and in Supabase aren't exactly the same (step 9). |
-| **Sync Sodeco absences** says *not connected yet* | The secret `SODECO_CERT_PFX_BASE64` or the variable `SODECO_BASE_URL` is missing (step 11). This is fine until Sodeco has sent the certificate. |
+| **Sync Sodeco absences** says *not connected yet* | The secret `SODECO_CERT_PFX_BASE64` is missing (step 11). This is fine until Sodeco has sent the certificate. |
 | Sync says *mac verify failure* | Wrong certificate password, or the base64 text isn't the whole file (step 11). |
 | Sync says *Sodeco numbers not on the employee list* | Those people are missing in **Admin → Holidays** or have another number there. |
 | Someone can't add days off | Only freelancers add their own (or full-time employees while that switch is on). Check their status in **Admin → Users**. |

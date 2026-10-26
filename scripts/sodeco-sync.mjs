@@ -6,28 +6,30 @@
 //   node --experimental-strip-types scripts/sodeco-sync.mjs --file answer.json
 //                                         use a saved Sodeco answer instead of calling Sodeco
 //
+// It asks Link2Prisma for GET /absences/{startdate} (the approved absences of
+// all workers of an employer from that day on), waits for the result, matches
+// the worker numbers to the employee list and stores whole periods.
+//
 // Settings (GitHub → Settings → Secrets and variables → Actions):
 //   SUPABASE_URL                variable: the Supabase Project URL
 //   SUPABASE_SERVICE_ROLE_KEY   secret: Supabase "service_role" / secret key
 //   SODECO_CERT_PFX_BASE64      secret: the certificate from Sodeco (.pfx/.p12), base64-encoded
 //   SODECO_CERT_PASSWORD        secret: the certificate's password
-//   SODECO_BASE_URL             variable: the Link2Prisma address from the documentation
 //   SODECO_EMPLOYER             variable: employer number(s) in Prisma, comma-separated
-//   SODECO_ABSENCES_PATH        variable (optional): the absences request, with {employer}, {from}, {to}
-//   SODECO_TICKET_PATH          variable (optional): where to fetch a queued result, with {ticket}
-//   SODECO_HEADERS              variable (optional): extra headers as JSON, with {employer}
+//   SODECO_BASE_URL             variable (optional): defaults to Sodeco's Link2Prisma address
 //   SODECO_ABSENCE_CODES        variable (optional): only these absence codes count (comma-separated)
 //   SODECO_EXCLUDE_CODES        variable (optional): these absence codes never count (e.g. sick leave)
 
 import { readFileSync } from 'node:fs'
 import { createClient as createSupabase } from '@supabase/supabase-js'
-import { createClient, ticketOf, waitForTicket } from './sodeco/client.mjs'
+import { createClient, dataOfResult, fetchData } from './sodeco/client.mjs'
 import { parseAbsences, workerKey } from './sodeco/absences.mjs'
 import { addDays, isWorkingDay } from '../supabase/functions/_shared/holidays.ts'
 
 const DAYS_BACK = 31
 const DAYS_AHEAD = 400
-const DEFAULT_ABSENCES_PATH = 'absences?employer={employer}&from={from}&to={to}'
+// From the Link2Prisma manual ("each social secretariat has a separate URI").
+const DEFAULT_BASE_URL = 'https://link2prisma.sodeco.info/link2prisma.svc'
 
 const args = process.argv.slice(2)
 const dryRun = args.includes('--dry-run')
@@ -39,31 +41,30 @@ function todayInBrussels() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Brussels' }).format(new Date())
 }
 
-function fill(template, values, encode = encodeURIComponent) {
-  return template.replace(/\{(\w+)\}/g, (_, key) => encode(values[key] ?? ''))
-}
-
-/** Asks Sodeco for every employer's absences in [from, to]. */
-async function fetchFromSodeco(from, to) {
-  for (const name of ['SODECO_BASE_URL', 'SODECO_CERT_PFX_BASE64', 'SODECO_CERT_PASSWORD']) {
+/** Asks Sodeco for every employer's approved absences from `from` on. */
+async function fetchFromSodeco(from) {
+  for (const name of ['SODECO_CERT_PFX_BASE64', 'SODECO_CERT_PASSWORD', 'SODECO_EMPLOYER']) {
     if (!env[name]) throw new Error(`${name} is not set yet. See README → "Connect Sodeco".`)
   }
-  const employers = list(env.SODECO_EMPLOYER)
+  const client = createClient({
+    baseUrl: env.SODECO_BASE_URL || DEFAULT_BASE_URL,
+    pfx: Buffer.from(env.SODECO_CERT_PFX_BASE64, 'base64'),
+    passphrase: env.SODECO_CERT_PASSWORD,
+  })
   const answers = []
-  for (const employer of employers.length ? employers : ['']) {
-    const headers = env.SODECO_HEADERS ? JSON.parse(fill(env.SODECO_HEADERS, { employer }, String)) : {}
-    const client = createClient({
-      baseUrl: env.SODECO_BASE_URL,
-      pfx: Buffer.from(env.SODECO_CERT_PFX_BASE64, 'base64'),
-      passphrase: env.SODECO_CERT_PASSWORD,
-      headers,
+  for (const employer of list(env.SODECO_EMPLOYER)) {
+    const data = await fetchData(client, `absences/${from.replaceAll('-', '')}`, employer, {
+      log: (line) => console.log(`[${employer}] ${line}`),
     })
-    let response = await client.get(fill(env.SODECO_ABSENCES_PATH || DEFAULT_ABSENCES_PATH, { employer, from, to }))
-    const ticket = ticketOf(response)
-    if (ticket) response = await waitForTicket(client, env.SODECO_TICKET_PATH, ticket)
-    answers.push({ employer, data: response.body })
+    answers.push({ employer, data })
   }
   return answers
+}
+
+/** A saved answer: the absences list itself, or the whole /Result object. */
+function readSavedAnswer(path) {
+  const saved = JSON.parse(readFileSync(path, 'utf8'))
+  return Array.isArray(saved) ? saved : dataOfResult(saved)
 }
 
 /** Joins single days into periods: Fri + Mon becomes Fri–Mon, also across public holidays. */
@@ -131,21 +132,29 @@ async function main() {
       if (!s.sodeco_employer) byWorker.set(workerKey('*', s.sodeco_worker_id), s.email)
     }
 
-    // 2. Sodeco's absences.
-    const answers = file ? [{ employer: list(env.SODECO_EMPLOYER)[0] ?? '', data: JSON.parse(readFileSync(file, 'utf8')) }] : await fetchFromSodeco(from, to)
+    // 2. Sodeco's absences (Sodeco only returns approved ones).
+    const answers = file
+      ? [{ employer: list(env.SODECO_EMPLOYER)[0] ?? '', data: readSavedAnswer(file) }]
+      : await fetchFromSodeco(from)
     const options = { include: list(env.SODECO_ABSENCE_CODES), exclude: list(env.SODECO_EXCLUDE_CODES) }
     const unmatched = new Set()
     const matched = []
+    const codes = new Map()
     let skippedCodes = 0
     for (const answer of answers) {
-      const { entries, skipped } = parseAbsences(answer.data, { ...options, employer: answer.employer })
-      skippedCodes += skipped.code
-      for (const e of entries) {
-        const email = byWorker.get(workerKey(e.employer ?? '', e.worker)) ?? byWorker.get(workerKey('*', e.worker))
-        if (email) matched.push({ ...e, email })
+      const parsed = parseAbsences(answer.data, options)
+      skippedCodes += parsed.skipped
+      for (const [code, count] of parsed.codes) codes.set(code, (codes.get(code) ?? 0) + count)
+      for (const e of parsed.entries) {
+        const email = byWorker.get(workerKey(answer.employer, e.worker)) ?? byWorker.get(workerKey('*', e.worker))
+        if (email) matched.push({ email, start: e.date, end: e.date, part: e.part, status: 'approved' })
         else unmatched.add(e.worker)
       }
     }
+    // Which absence codes Sodeco used, to decide which ones to leave out (SODECO_EXCLUDE_CODES).
+    console.log(
+      `Absence codes found: ${[...codes].sort(([a], [b]) => Number(a) - Number(b)).map(([c, n]) => `${c} (${n}×)`).join(', ') || 'none'}`,
+    )
 
     // 3. Turn them into planner rows (whole periods, inside the sync window).
     const rows = mergeDays(matched)

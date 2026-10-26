@@ -220,9 +220,6 @@ export default function HolidaysPage() {
           <span className="chip chip-employee chip-me rounded px-1.5 py-px font-medium">You</span> solid = your days
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="chip chip-employee chip-requested rounded px-1.5 py-px font-medium">Pending</span> not approved yet
-        </span>
-        <span className="inline-flex items-center gap-1.5">
           <span className="size-3 rounded-sm border border-rose-500/60 bg-rose-500/10" /> public holiday
         </span>
       </div>
