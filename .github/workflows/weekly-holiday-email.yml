@@ -1,13 +1,17 @@
 # Sends the weekly "who's off next week" email to the whole company.
-# Runs every Friday afternoon (Brussels time); "Run workflow" sends it
-# right away (it is only sent once per week, so running it twice is safe).
+# "Run workflow" sends it right away (it is only sent once per week, so
+# running it twice is safe).
 # Needs secret CRON_SECRET (also set in Supabase) and variable SUPABASE_URL.
+#
+# The Friday schedule is OFF until the company gets the go-ahead. To switch
+# it on, add this under "on:" (GitHub uses UTC: 13:00 UTC = 15:00 Brussels
+# time in summer, 14:00 in winter):
+#
+#   schedule:
+#     - cron: '0 13 * * 5'
 name: Weekly holiday email
 
 on:
-  schedule:
-    # GitHub uses UTC: 13:00 UTC = 15:00 in summer, 14:00 in winter.
-    - cron: '0 13 * * 5'
   workflow_dispatch:
 
 jobs:
