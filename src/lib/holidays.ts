@@ -14,7 +14,6 @@ export interface AppSettings {
   digest_last_week: string | null
   digest_last_sent_at: string | null
   digest_last_sent_count: number | null
-  employees_add_own: boolean
   sodeco_last_sync_at: string | null
   sodeco_last_sync_ok: boolean | null
   sodeco_last_sync_message: string | null

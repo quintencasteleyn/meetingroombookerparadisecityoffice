@@ -96,7 +96,7 @@ export default function HolidaysAdmin() {
     <div className="space-y-5">
       <WeeklyEmailCard settings={settings} reload={reload} />
       <EmployeeListCard />
-      <SodecoCard settings={settings} reload={reload} />
+      <SodiweCard settings={settings} />
     </div>
   )
 }
@@ -279,7 +279,7 @@ interface ParsedLine {
   sodeco_worker_id: string | null
 }
 
-/** One employee per line: email, name, Sodeco number (comma, semicolon or tab; pasted from Excel works). */
+/** One employee per line: email, name, Sodiwe number (comma, semicolon or tab; pasted from Excel works). */
 function parseEmployees(text: string): { rows: ParsedLine[]; errors: string[] } {
   const rows: ParsedLine[] = []
   const errors: string[] = []
@@ -363,7 +363,7 @@ function EmployeeListCard() {
     <Card
       title={`Full-time employees${staff ? ` (${staff.length})` : ''}`}
       icon={<Upload className="size-4" />}
-      subtitle="Everyone on this list is a full-time employee: they show up in the planner, also without an account, and their days off come from Sodeco."
+      subtitle="Everyone on this list is a full-time employee: they show up in the planner, also without an account, and their days off come from Sodiwe."
       actions={
         <Button size="sm" variant="primary" icon={<Upload className="size-4" />} onClick={() => setAdding(true)}>
           Add or update employees
@@ -375,14 +375,14 @@ function EmployeeListCard() {
       ) : staff.length === 0 ? (
         <Alert tone="info">
           The list is empty. Click <span className="font-medium">Add or update employees</span> and paste the email list
-          (with names and Sodeco numbers).
+          (with names and Sodiwe numbers).
         </Alert>
       ) : (
         <>
           {missingNumbers > 0 && (
             <div className="mb-3">
               <Alert tone="warning">
-                {missingNumbers} {missingNumbers === 1 ? 'employee has' : 'employees have'} no Sodeco number yet. Their
+                {missingNumbers} {missingNumbers === 1 ? 'employee has' : 'employees have'} no Sodiwe number yet. Their
                 days off can't be matched until you add it.
               </Alert>
             </div>
@@ -402,7 +402,7 @@ function EmployeeListCard() {
                 <tr className="text-left text-[11px] uppercase tracking-wide text-muted">
                   <th className="px-3 py-2 font-semibold">Name</th>
                   <th className="px-3 py-2 font-semibold">Email</th>
-                  <th className="px-3 py-2 font-semibold">Sodeco no.</th>
+                  <th className="px-3 py-2 font-semibold">Sodiwe no.</th>
                   <th className="px-3 py-2 font-semibold">Account</th>
                   <th className="px-3 py-2" />
                 </tr>
@@ -452,7 +452,7 @@ function EmployeeListCard() {
           }
         >
           <p className="mb-3 text-sm text-muted">
-            One employee per line: <span className="font-medium text-fg">email, full name, Sodeco worker number</span>.
+            One employee per line: <span className="font-medium text-fg">email, full name, Sodiwe worker number</span>.
             Copying the three columns from Excel works too. Someone who is already on the list is updated.
           </p>
           <textarea
@@ -467,7 +467,7 @@ function EmployeeListCard() {
             <p className="mt-2 flex items-center gap-1.5 text-sm text-emerald-600">
               <CheckCircle2 className="size-4" /> {parsed.rows.length} ready to save
               {parsed.rows.some((r) => !r.sodeco_worker_id) &&
-                ` (${parsed.rows.filter((r) => !r.sodeco_worker_id).length} without a Sodeco number)`}
+                ` (${parsed.rows.filter((r) => !r.sodeco_worker_id).length} without a Sodiwe number)`}
             </p>
           )}
           {parsed.errors.length > 0 && (
@@ -501,7 +501,7 @@ function EmployeeListCard() {
           }
         >
           <p className="text-sm">
-            Their days off are no longer synced from Sodeco. If they have an account, it stays; you can change their
+            Their days off are no longer synced from Sodiwe. If they have an account, it stays; you can change their
             status in Admin → Users.
           </p>
         </Dialog>
@@ -511,33 +511,22 @@ function EmployeeListCard() {
 }
 
 // ---------------------------------------------------------------------
-// Sodeco connection
+// Sodiwe connection
 // ---------------------------------------------------------------------
 
-function SodecoCard({ settings, reload }: { settings: AppSettings; reload: () => Promise<void> }) {
-  const toast = useToast()
-  const [saving, setSaving] = useState(false)
+function SodiweCard({ settings }: { settings: AppSettings }) {
   const synced = settings.sodeco_last_sync_at
-
-  async function toggle(value: boolean) {
-    setSaving(true)
-    const { error } = await supabase.from('app_settings').update({ employees_add_own: value }).eq('id', true)
-    setSaving(false)
-    if (error) return toast(friendlyError(error), 'error')
-    toast(value ? 'Full-time employees can now add their own days off.' : 'Only freelancers add their own days off now.')
-    await reload()
-  }
 
   return (
     <Card
-      title="Sodeco connection"
+      title="Sodiwe connection"
       icon={<PlugZap className="size-4" />}
-      subtitle="Every night, GitHub copies the days off of everyone on the employee list from Sodeco into the planner."
+      subtitle="Every night, GitHub copies the days off of everyone on the employee list from Sodiwe into the planner."
     >
       <div className="space-y-4">
         {!synced ? (
           <Alert tone="info">
-            Not connected yet. Once Sodeco has sent the certificate, follow “Connect Sodeco” in the README.
+            Not connected yet. Once Sodiwe has sent the certificate, follow “Connect Sodiwe” in the README.
           </Alert>
         ) : settings.sodeco_last_sync_ok ? (
           <Alert tone="success" icon={<CheckCircle2 className="size-4 text-emerald-500" />}>
@@ -549,17 +538,9 @@ function SodecoCard({ settings, reload }: { settings: AppSettings; reload: () =>
           </Alert>
         )}
         <p className="text-xs text-muted">
-          To sync right away: GitHub → Actions → <span className="font-medium">Sync Sodeco absences</span> → Run workflow.
+          To sync right away: GitHub → Actions → <span className="font-medium">Sync Sodiwe absences</span> → Run workflow.
+          Full-time employees' days off only come from Sodiwe; nobody adds them by hand.
         </p>
-        <div className="border-t border-line pt-4">
-          <Toggle
-            checked={settings.employees_add_own}
-            disabled={saving}
-            onChange={toggle}
-            label="Let full-time employees add their own days off too"
-            hint="Handy until the Sodeco connection is live. Switch it off afterwards, so days off aren't counted twice."
-          />
-        </div>
       </div>
     </Card>
   )

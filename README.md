@@ -2,6 +2,8 @@
 
 One place for the Paradise City office: **book the meeting rooms** and see **who is off** in the holiday planner.
 
+> **The meeting rooms are paused for now.** Their tab, Admin → Rooms and the room questions in the FAQ are hidden; bookings stay in the database. To bring them back, set `ROOMS_ENABLED` to `true` in [`src/lib/features.ts`](src/lib/features.ts).
+
 **What colleagues can do**
 
 *Meeting rooms*
@@ -18,11 +20,11 @@ One place for the Paradise City office: **book the meeting rooms** and see **who
 *Holiday planner*
 
 - See **who is off, by name, on every day**, one or two months at a time. On a phone the months are shown below each other.
-- Everyone is in one calendar: **full-time employees** (their days off come in automatically from **Sodeco** every night) and **freelancers** (they add their own days off in the app, also half days).
+- Everyone is in one calendar: **full-time employees** (their days off come in automatically from **Sodiwe** every night, and only from there: nobody adds them by hand) and **freelancers** (they add their own days off in the app, also half days).
 - Public holidays in Belgium are marked. Days when a quarter of the team is off get an amber “n off” badge.
 - Click a day to see everyone who is off, who is off this week, and your own days off.
 - **Every Friday** everyone gets an email: who is off next week (“Full week” or the exact days), plus who has days off planned in the 4 weeks after.
-- Colleagues only see *that* someone is off, never why. Leave types, sick leave and balances stay in Sodeco.
+- Colleagues only see *that* someone is off, never why. Leave types, sick leave and balances stay in Sodiwe.
 
 *Account*
 
@@ -36,10 +38,10 @@ One place for the Paradise City office: **book the meeting rooms** and see **who
 - Change or cancel any booking, or **overrule** it when booking. The original owner gets an email.
 - Rename rooms and change their capacity and colour.
 - Block, unblock or delete colleagues, give other colleagues admin rights, and change anyone's **work status** (full-time employee or freelancer).
-- Keep the **list of full-time employees** with their Sodeco numbers (paste it from Excel). Everyone on it shows up in the planner, also without an account.
-- Add, change or remove days off for anyone (except the ones that come from Sodeco).
+- Keep the **list of full-time employees** with their Sodiwe numbers (paste it from Excel). Everyone on it shows up in the planner, also without an account.
+- Add, change or remove days off for freelancers. Full-time employees' days off only come from Sodiwe.
 - Preview the weekly email, send themselves a test, send it right away, switch it off, or send it to a distribution list instead of to everyone.
-- See when Sodeco last synced and whether it worked.
+- See when Sodiwe last synced and whether it worked.
 
 | Holiday planner | Phone | Admin → Holidays |
 |---|---|---|
@@ -49,7 +51,7 @@ One place for the Paradise City office: **book the meeting rooms** and see **who
 
 <sub>Screenshots use made-up colleagues, bookings and days off.</sub>
 
-**How it's built:** a React website hosted on **GitHub Pages**, with login, the database and email functions on **Supabase**. Emails are sent through your **Microsoft 365** account. Two scheduled **GitHub Actions** copy the days off from Sodeco every night and send the weekly email on Fridays. The database enforces every rule (no double bookings, who may add days off for whom, and so on), so nobody can get around them.
+**How it's built:** a React website hosted on **GitHub Pages**, with login, the database and email functions on **Supabase**. Emails are sent through your **Microsoft 365** account. Two scheduled **GitHub Actions** copy the days off from Sodiwe every night and send the weekly email on Fridays. The database enforces every rule (no double bookings, who may add days off for whom, and so on), so nobody can get around them.
 
 ---
 
@@ -57,11 +59,11 @@ One place for the Paradise City office: **book the meeting rooms** and see **who
 
 If the room booker is already live, you only need these steps. Each one is explained in full further down.
 
-1. **Database:** run [`supabase/migrations/20261016000000_holiday_planner.sql`](supabase/migrations/20261016000000_holiday_planner.sql) once in the Supabase SQL Editor ([step 2](#2-create-the-database)).
+1. **Database:** run [`supabase/migrations/20261016000000_holiday_planner.sql`](supabase/migrations/20261016000000_holiday_planner.sql) and then [`supabase/migrations/20261026000000_days_off_freelancers_only.sql`](supabase/migrations/20261026000000_days_off_freelancers_only.sql) once each in the Supabase SQL Editor ([step 2](#2-create-the-database)).
 2. **Code:** merge this branch into `main`. GitHub then publishes the new website and deploys the new `holiday-digest` function by itself. Check that both **Deploy website** and **Deploy Supabase functions** turn green in the **Actions** tab. If the functions one didn't run, start it with **Run workflow** ([step 5](#5-deploy-the-email-and-admin-functions)).
 3. **Weekly email:** create the `CRON_SECRET` and add it to both Supabase and GitHub ([step 9](#9-the-weekly-holiday-email)).
 4. **Employee list:** paste the full-time employees into **Admin → Holidays** ([step 10](#10-fill-in-the-employee-list)).
-5. **Sodeco:** when Sodeco has sent the certificate, connect it ([step 11](#11-connect-sodeco)). Until then you can let full-time employees add their own days off (Admin → Holidays → *Sodeco connection*).
+5. **Sodiwe:** when Sodiwe has sent the certificate, connect it ([step 11](#11-connect-sodiwe)). Until then the planner only shows the freelancers' days off.
 
 Everyone who already has an account gets the question “Full-time employee or freelancer?” the next time they sign in. People on the employee list are set to full-time automatically.
 
@@ -92,6 +94,7 @@ Then run the other files in `supabase/migrations/` the same way, **in date order
 | `20261006000000_second_email_domain.sql` | `@touquetmusicbeach.com` addresses can sign up too |
 | `20261007000000_waiting_list_weekdays.sql` | waiting list, Monday to Friday only |
 | `20261016000000_holiday_planner.sql` | the holiday planner: work status, employee list, days off, weekly email settings |
+| `20261026000000_days_off_freelancers_only.sql` | days off are only added by hand for freelancers; full-time employees' come from Sodiwe only |
 
 > Tip: to check what's already been run, open **Table Editor**. If you see the tables `staff`, `absences` and `app_settings`, the holiday planner file has been run.
 
@@ -182,9 +185,9 @@ Who gets it: by default **everyone** (all accounts plus everyone on the employee
 
 ### 10. Fill in the employee list
 
-The employee list says who the full-time employees are, and which Sodeco number belongs to which email address.
+The employee list says who the full-time employees are, and which Sodiwe number belongs to which email address.
 
-1. Make a list in Excel with three columns: **work email**, **full name**, **Sodeco worker number** (in Prisma: the *personeelsnummer* / worker number).
+1. Make a list in Excel with three columns: **work email**, **full name**, **Sodiwe worker number** (in Prisma: the *personeelsnummer* / worker number).
 2. In the app: **Admin → Holidays** → *Full-time employees* → **Add or update employees**.
 3. Select the three columns in Excel, copy, and paste them into the box. Typing them works too, one person per line: `sofie@paradisecity.be, Sofie Vermeulen, 1002`.
 4. Click **Save**. Running it again with the same email updates that person.
@@ -192,22 +195,22 @@ The employee list says who the full-time employees are, and which Sodeco number 
 Everyone on the list:
 - shows up in the planner and gets the weekly email, also without an account;
 - is a full-time employee automatically (also when they sign up later);
-- gets their days off from Sodeco, matched on the worker number.
+- gets their days off from Sodiwe, matched on the worker number.
 
 Freelancers don't go on this list. They create an account and choose *Freelancer*.
 
-### 11. Connect Sodeco
+### 11. Connect Sodiwe
 
-The days off of full-time employees come from Sodeco's **Link2Prisma** API ([documentation](https://link2prisma.sodeco.info/documentation/): the manual `MO_Link2Prisma_EN.pdf` and `Schemas/Absences.json`). We only *read* from it. A GitHub Action (**Sync Sodeco absences**) runs every night at about 05:15. It:
+The days off of full-time employees come from Sodiwe's **Link2Prisma** API ([documentation](https://link2prisma.sodeco.info/documentation/): the manual `MO_Link2Prisma_EN.pdf` and `Schemas/Absences.json`). We only *read* from it. A GitHub Action (**Sync Sodiwe absences**) runs every night at about 05:15. It:
 
 1. asks Link2Prisma for `GET /absences/{date}` (the **approved** absences of all workers of your employer, from a month ago on), with the header `Employer` = your employer number;
-2. waits while Sodeco's queue handles the request (`GET /Result/{id}`, usually a few minutes);
-3. matches the Sodeco worker numbers to the employee list and stores the days off as periods: one day per absence, several days in a row (also across a weekend or public holiday) become one period, and up to 4.5 hours on a day counts as half a day.
+2. waits while Sodiwe's queue handles the request (`GET /Result/{id}`, usually a few minutes);
+3. matches the Sodiwe worker numbers to the employee list and stores the days off as periods: one day per absence, several days in a row (also across a weekend or public holiday) become one period, and up to 4.5 hours on a day counts as half a day.
 
-**What to ask Sodeco (reply to their email):**
+**What to ask Sodiwe (reply to their email):**
 
 - “The connection on our side is ready. Please create the certificate.” They send a certificate file (`.pfx` or `.p12`) and its **password**. Ask for read access to the absences of your employer number(s).
-- Whether the API **only accepts certain IP addresses**. GitHub's servers don't have a fixed IP address, so if Sodeco requires one, the sync has to run from a machine with a fixed address instead.
+- Whether the API **only accepts certain IP addresses**. GitHub's servers don't have a fixed IP address, so if Sodiwe requires one, the sync has to run from a machine with a fixed address instead.
 - Whether `https://link2prisma.sodeco.info/link2prisma.svc` (the address in the manual) is also the address for live data.
 - Whether your employees' holidays are registered in the **absence calendar** in Prisma. Only those come through the API.
 
@@ -220,29 +223,29 @@ The days off of full-time employees come from Sodeco's **Link2Prisma** API ([doc
 
    | Name | Value |
    |---|---|
-   | `SODECO_CERT_PFX_BASE64` | paste the text from step 1 |
-   | `SODECO_CERT_PASSWORD` | the certificate's password |
+   | `SODIWE_CERT_PFX_BASE64` | paste the text from step 1 |
+   | `SODIWE_CERT_PASSWORD` | the certificate's password |
    | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → **Project Settings → API Keys** → the **secret** key (`sb_secret_…`), or under *Legacy API keys* the **service_role** key. Keep this one secret: it can read and change everything. |
 
 3. **Variables** tab → **New repository variable**, add:
 
    | Name | Value |
    |---|---|
-   | `SODECO_EMPLOYER` | your employer number in Prisma (the *external number* of the employer). More than one: separate with commas |
-   | `SODECO_BASE_URL` | *(only if Sodeco gives you another address)* default: `https://link2prisma.sodeco.info/link2prisma.svc` |
-   | `SODECO_EXCLUDE_CODES` | *(optional)* absence codes that should never show, e.g. the sick-leave codes, separated by commas |
-   | `SODECO_ABSENCE_CODES` | *(optional)* if set, **only** these absence codes show |
+   | `SODIWE_EMPLOYER` | your employer number in Prisma (the *external number* of the employer). More than one: separate with commas |
+   | `SODIWE_BASE_URL` | *(only if Sodiwe gives you another address)* default: `https://link2prisma.sodeco.info/link2prisma.svc` |
+   | `SODIWE_EXCLUDE_CODES` | *(optional)* absence codes that should never show, e.g. the sick-leave codes, separated by commas |
+   | `SODIWE_ABSENCE_CODES` | *(optional)* if set, **only** these absence codes show |
 
-**Try it without writing anything:** GitHub → **Actions** → **Sync Sodeco absences** → **Run workflow** → tick *Only show what would change* → **Run workflow**. Open the run → *Sync*. It shows the days off it found, which **absence codes** Sodeco used (with how often), and which Sodeco numbers it couldn't match to the employee list. Use the codes to decide whether to fill in `SODECO_EXCLUDE_CODES`.
+**Try it without writing anything:** GitHub → **Actions** → **Sync Sodiwe absences** → **Run workflow** → tick *Only show what would change* → **Run workflow**. Open the run → *Sync*. It shows the days off it found, which **absence codes** Sodiwe used (with how often), and which Sodiwe numbers it couldn't match to the employee list. Use the codes to decide whether to fill in `SODIWE_EXCLUDE_CODES`.
 
-**Then for real:** run it again without the tick. **Admin → Holidays → Sodeco connection** now shows the last sync. From now on it runs every night by itself. If you had switched on *Let full-time employees add their own days off too*, switch it off now, so days off aren't counted twice.
+**Then for real:** run it again without the tick. **Admin → Holidays → Sodiwe connection** now shows the last sync. From now on it runs every night by itself.
 
 | The run says | What to do |
 |---|---|
-| *Sodeco answered 403 … did not accept the certificate* | The certificate is missing, wrong or expired. Check the two certificate secrets, or ask Sodeco. |
-| *401 … no access to this employer* | The certificate's user has no rights on that employer number. Ask Sodeco to add them. |
-| *404 The given Employer is not found* | `SODECO_EMPLOYER` is wrong. |
-| *did not finish the request within 15 minutes* | Sodeco's queue was slow. The next night's run tries again, or start it again by hand. |
+| *Sodiwe answered 403 … did not accept the certificate* | The certificate is missing, wrong or expired. Check the two certificate secrets, or ask Sodiwe. |
+| *401 … no access to this employer* | The certificate's user has no rights on that employer number. Ask Sodiwe to add them. |
+| *404 The given Employer is not found* | `SODIWE_EMPLOYER` is wrong. |
+| *did not finish the request within 15 minutes* | Sodiwe's queue was slow. The next night's run tries again, or start it again by hand. |
 
 ---
 
@@ -259,7 +262,7 @@ The days off of full-time employees come from Sodeco's **Link2Prisma** API ([doc
 | Taken slot | Join the waiting list; first come, first served when it frees up |
 | Recurring bookings | Weekdays, weekly, every 2 weeks, monthly (max 3 months) |
 | Changing bookings | Owners change or cancel their own; admins change, cancel or overrule all |
-| Days off | Freelancers add and change their own; admins anyone's; Sodeco days off only change in Sodeco |
+| Days off | Freelancers add and change their own, and admins can do it for them; full-time employees' days off only come from Sodiwe |
 | Weekly email | Friday afternoons (14:00–15:00), about next week plus the 4 weeks after; once per week. Schedule currently off |
 | Colours | Personal per account |
 
@@ -267,10 +270,11 @@ The days off of full-time employees come from Sodeco's **Link2Prisma** API ([doc
 
 | What | Where |
 |---|---|
-| Room names, capacity, colours | In the app: **Admin → Rooms** |
+| Meeting rooms on or off | `ROOMS_ENABLED` in `src/lib/features.ts` (currently off) |
+| Room names, capacity, colours | In the app: **Admin → Rooms** (when the rooms are on) |
 | Admins | In the app: **Admin → Users → Make admin** |
 | Someone's work status | In the app: **Admin → Users** (dropdown). People on the employee list are always full-time |
-| Full-time employees and their Sodeco numbers | In the app: **Admin → Holidays** |
+| Full-time employees and their Sodiwe numbers | In the app: **Admin → Holidays** |
 | Weekly email on/off, recipients | In the app: **Admin → Holidays** |
 | Weekly email schedule on/off, day and time | `schedule` / `cron` in `.github/workflows/weekly-holiday-email.yml` (in UTC; currently off) |
 | Number of weeks in the weekly email | `EXTRA_WEEKS` in `supabase/functions/_shared/digest.ts` |
@@ -283,7 +287,7 @@ Changes to the SQL go in a **new** file in `supabase/migrations/`, which you run
 
 ## Good to know
 
-- **Free Supabase projects pause after about a week without any activity**, e.g. during the Christmas holidays. You can wake the project up in the Supabase dashboard, or upgrade to the Pro plan to avoid this. Once Sodeco is connected, the nightly sync keeps the project awake.
+- **Free Supabase projects pause after about a week without any activity**, e.g. during the Christmas holidays. You can wake the project up in the Supabase dashboard, or upgrade to the Pro plan to avoid this. Once Sodiwe is connected, the nightly sync keeps the project awake.
 - GitHub runs scheduled actions on a best-effort basis: the Friday email can arrive up to about an hour late when GitHub is busy. If this repository is **public**, GitHub pauses scheduled actions after 60 days without any change to the repository and emails you; click *Enable workflow* in the Actions tab to restart them.
 - The calendars update live: when a colleague books a room or adds days off, you see it right away.
 - Emails with links open a page with a button that finishes the action. This is on purpose: Microsoft's link scanner would otherwise "use up" the one-time link before the colleague clicks it.
@@ -297,13 +301,13 @@ Changes to the SQL go in a **new** file in `supabase/migrations/`, which you run
 | *Microsoft login failed* in the logs | Wrong tenant/client ID or secret, or the secret expired. |
 | *Sending email failed (403)* in the logs | Mail.Send is missing admin consent, or the mailbox in `MAIL_FROM` isn't allowed for the app. |
 | Admin page says it can't load users | The `admin-users` function isn't deployed (step 5). |
-| The Holidays page is empty or shows an error | The file `20261016000000_holiday_planner.sql` hasn't been run yet (step 2). |
+| The Holidays page is empty or shows an error | The files `20261016000000_holiday_planner.sql` and `20261026000000_days_off_freelancers_only.sql` haven't been run yet (step 2). |
 | **Preview** / **Send me a test** gives an error | The `holiday-digest` function isn't deployed (step 5), or the Microsoft secrets are missing (step 6). |
 | **Weekly holiday email** action fails with *Wrong CRON_SECRET* | The `CRON_SECRET` in GitHub and in Supabase aren't exactly the same (step 9). |
-| **Sync Sodeco absences** says *not connected yet* | The secret `SODECO_CERT_PFX_BASE64` is missing (step 11). This is fine until Sodeco has sent the certificate. |
+| **Sync Sodiwe absences** says *not connected yet* | The secret `SODIWE_CERT_PFX_BASE64` is missing (step 11). This is fine until Sodiwe has sent the certificate. |
 | Sync says *mac verify failure* | Wrong certificate password, or the base64 text isn't the whole file (step 11). |
-| Sync says *Sodeco numbers not on the employee list* | Those people are missing in **Admin → Holidays** or have another number there. |
-| Someone can't add days off | Only freelancers add their own (or full-time employees while that switch is on). Check their status in **Admin → Users**. |
+| Sync says *Sodiwe numbers not on the employee list* | Those people are missing in **Admin → Holidays** or have another number there. |
+| Someone can't add days off | Only freelancers add days off by hand; full-time employees' come from Sodiwe. Check their status in **Admin → Users**. |
 
 ## Developing locally
 
@@ -315,9 +319,9 @@ npm run dev
 
 `npm run build` type-checks and builds the site. Every pull request runs the same check on GitHub.
 
-To try the Sodeco sync with a saved answer from Sodeco (writes nothing with `--dry-run`):
+To try the Sodiwe sync with a saved answer from Sodiwe (writes nothing with `--dry-run`):
 
 ```bash
 SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… \
-  node --experimental-strip-types scripts/sodeco-sync.mjs --file answer.json --dry-run
+  node --experimental-strip-types scripts/sodiwe-sync.mjs --file answer.json --dry-run
 ```

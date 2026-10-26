@@ -2,7 +2,7 @@ import type { ThemeSettings } from './theme'
 
 export type Role = 'member' | 'admin'
 
-/** Full-time employees' days off come from Sodeco; freelancers add their own. */
+/** Full-time employees' days off come from Sodiwe; freelancers add their own. */
 export type WorkType = 'employee' | 'freelancer'
 
 export interface Profile {

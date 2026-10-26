@@ -148,7 +148,7 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      <Card title="Profile" subtitle="Your name is shown on your bookings.">
+      <Card title="Profile" subtitle="Your name is shown to your colleagues.">
         <form onSubmit={saveName} className="grid gap-4 sm:grid-cols-2">
           <Field label="Full name">
             {(id) => (
@@ -224,7 +224,7 @@ function WorkStatusCard() {
       </p>
       <p className="mt-3 text-sm text-muted">
         {status === 'employee'
-          ? 'Your days off come in automatically from Sodeco.'
+          ? 'Your days off come in automatically from Sodiwe.'
           : status === 'freelancer'
             ? 'You add your own days off in the holiday planner.'
             : ''}{' '}

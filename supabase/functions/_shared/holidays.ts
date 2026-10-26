@@ -2,7 +2,7 @@
 // count days the same way. Plain TypeScript (no Deno or browser APIs);
 // dates are 'YYYY-MM-DD' strings in Brussels time.
 
-/** 'half' = half a day when Sodeco doesn't say whether it's the morning or the afternoon. */
+/** 'half' = half a day when Sodiwe doesn't say whether it's the morning or the afternoon. */
 export type DayPart = 'full' | 'am' | 'pm' | 'half'
 export type WorkType = 'employee' | 'freelancer'
 

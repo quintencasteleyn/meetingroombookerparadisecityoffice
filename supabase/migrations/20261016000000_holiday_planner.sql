@@ -7,11 +7,11 @@
 --     (profiles.work_type). They choose when they sign up (or the first
 --     time they log in); after that only an admin can change it.
 --   * The employee list (staff) holds every full-time employee, also the
---     ones without an account, with their Sodeco worker number.
+--     ones without an account, with their Sodiwe worker number.
 --     Everyone on the list is automatically a full-time employee.
 --   * absences: days off. Freelancers add their own in the app.
---     Full-time employees' days off come in from Sodeco every night.
---   * app_settings: the weekly "who's off" email and the Sodeco sync status.
+--     Full-time employees' days off come in from Sodiwe every night.
+--   * app_settings: the weekly "who's off" email and the Sodiwe sync status.
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
@@ -24,9 +24,9 @@ alter table public.profiles
 create table public.staff (
   email text primary key,
   full_name text not null check (char_length(full_name) between 1 and 100),
-  -- The worker number in Sodeco Prisma, used to match absences to people.
+  -- The worker number in Sodiwe Prisma, used to match absences to people.
   sodeco_worker_id text check (char_length(sodeco_worker_id) between 1 and 40),
-  -- Only needed when the group has more than one employer number in Sodeco.
+  -- Only needed when the group has more than one employer number in Sodiwe.
   sodeco_employer text check (char_length(sodeco_employer) between 1 and 40),
   active boolean not null default true,
   created_at timestamptz not null default now()
@@ -42,11 +42,11 @@ create table public.absences (
   start_date date not null,
   end_date date not null,
   -- 'am' / 'pm' = only the morning / afternoon of a single day;
-  -- 'half' = half a day when Sodeco doesn't say which half.
+  -- 'half' = half a day when Sodiwe doesn't say which half.
   day_part text not null default 'full' check (day_part in ('full', 'am', 'pm', 'half')),
   status text not null default 'approved' check (status in ('approved', 'requested')),
   source text not null default 'manual' check (source in ('manual', 'sodeco')),
-  -- Sodeco's own id for the absence, so the nightly sync can update it.
+  -- Sodiwe's own id for the absence, so the nightly sync can update it.
   external_id text,
   created_by uuid references public.profiles (id) on delete set null,
   created_at timestamptz not null default now(),
@@ -69,7 +69,7 @@ create table public.app_settings (
   digest_last_week date,
   digest_last_sent_at timestamptz,
   digest_last_sent_count integer,
-  -- Until the Sodeco connection is live, full-time employees can be
+  -- Until the Sodiwe connection is live, full-time employees can be
   -- allowed to add their own days off too.
   employees_add_own boolean not null default false,
   sodeco_last_sync_at timestamptz,
@@ -280,7 +280,7 @@ begin
     raise exception 'A morning or afternoon off has to be a single day.';
   end if;
 
-  -- Sodeco is the judge of its own data; these limits are for the app.
+  -- Sodiwe is the judge of its own data; these limits are for the app.
   if new.source = 'manual' then
     if new.end_date - new.start_date > 366 then
       raise exception 'Add at most one year of days off in one go.';
@@ -394,7 +394,7 @@ revoke all on public.app_settings from anon, authenticated;
 grant update (work_type) on public.profiles to authenticated;
 
 -- Employee list: only admins see and manage it. Colleagues see the names
--- through holiday_people(), without the Sodeco numbers.
+-- through holiday_people(), without the Sodiwe numbers.
 grant select, insert, update, delete on public.staff to authenticated;
 
 create policy "Admins manage the employee list" on public.staff
@@ -403,7 +403,7 @@ create policy "Admins manage the employee list" on public.staff
   with check (public.is_admin());
 
 -- Days off: everyone sees all of them. Freelancers add and change their own,
--- admins add and change anyone's. Sodeco days off are only changed by the sync.
+-- admins add and change anyone's. Sodiwe days off are only changed by the sync.
 grant select, insert, delete on public.absences to authenticated;
 grant update (start_date, end_date, day_part) on public.absences to authenticated;
 

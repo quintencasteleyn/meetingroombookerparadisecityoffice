@@ -18,6 +18,7 @@ import {
   SignupPage,
 } from './pages/AuthPages'
 import { isConfigured } from './lib/supabase'
+import { ROOMS_ENABLED } from './lib/features'
 
 function FullPageSpinner() {
   return (
@@ -66,7 +67,7 @@ export default function App() {
             <Route path="/auth/confirm" element={<AuthConfirmPage />} />
             <Route path="/reset-password" element={<RequireAuth><ResetPasswordPage /></RequireAuth>} />
             <Route element={<RequireAuth><Shell /></RequireAuth>}>
-              <Route path="/" element={<CalendarPage />} />
+              <Route path="/" element={ROOMS_ENABLED ? <CalendarPage /> : <Navigate to="/holidays" replace />} />
               <Route path="/holidays" element={<HolidaysPage />} />
               <Route path="/faq" element={<FaqPage />} />
               <Route path="/settings" element={<SettingsPage />} />

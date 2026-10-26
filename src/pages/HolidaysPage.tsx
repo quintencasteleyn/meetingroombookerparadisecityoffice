@@ -15,7 +15,6 @@ import {
   addDays,
   mondayOf,
   useAbsences,
-  useAppSettings,
   usePeople,
   type Absence,
 } from '../lib/holidays'
@@ -70,15 +69,20 @@ export default function HolidaysPage() {
 
   const { absences, reload } = useAbsences(loadFrom, loadTo)
   const { people, byEmail } = usePeople()
-  const { settings } = useAppSettings()
 
   const me = profile?.email ?? ''
   const personOf = useCallback((email: string) => byEmail.get(email), [byEmail])
-  const canAddOwn =
-    profile?.work_type === 'freelancer' || (profile?.work_type === 'employee' && Boolean(settings?.employees_add_own))
+  // Days off are only added by hand for freelancers: by themselves, or by an admin.
+  // Full-time employees' days off come from Sodiwe only.
+  const canAddOwn = profile?.work_type === 'freelancer'
+  const freelancers = useMemo(() => people.filter((p) => p.work_type === 'freelancer'), [people])
+  const canAddForOthers = isAdmin && freelancers.length > 0
   const canChange = useCallback(
-    (a: Absence) => a.source === 'manual' && (isAdmin || (a.person_email === me && canAddOwn)),
-    [isAdmin, me, canAddOwn],
+    (a: Absence) =>
+      a.source === 'manual' &&
+      byEmail.get(a.person_email)?.work_type === 'freelancer' &&
+      (isAdmin || (a.person_email === me && canAddOwn)),
+    [isAdmin, me, canAddOwn, byEmail],
   )
 
   const visible = useMemo(
@@ -126,11 +130,7 @@ export default function HolidaysPage() {
 
   const dayList = byDay.get(selected) ?? []
   const isEmployee = profile?.work_type === 'employee'
-  const myNote = isEmployee
-    ? canAddOwn
-      ? 'Until the Sodeco connection is live, you can add your own days off here.'
-      : 'Your days off come from Sodeco. To change them, change them in Sodeco.'
-    : null
+  const myNote = isEmployee ? 'Your days off come from Sodiwe. To change them, change them in Sodiwe.' : null
 
   async function remove() {
     if (!removing) return
@@ -198,20 +198,21 @@ export default function HolidaysPage() {
           <option value="employee">Full-time only</option>
           <option value="freelancer">Freelancers only</option>
         </select>
-        {canAddOwn || isAdmin ? (
-          <Button variant="primary" size="sm" icon={<Plus className="size-4" />} onClick={() => setEditing('new')}>
-            Add days off
-          </Button>
-        ) : isEmployee ? (
+        {isEmployee && (
           <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-xs text-muted">
-            <RefreshCw className="size-3.5" /> Your days off come from Sodeco
+            <RefreshCw className="size-3.5" /> Your days off come from Sodiwe
           </span>
-        ) : null}
+        )}
+        {(canAddOwn || canAddForOthers) && (
+          <Button variant="primary" size="sm" icon={<Plus className="size-4" />} onClick={() => setEditing('new')}>
+            {canAddOwn ? 'Add days off' : 'Add days off for a freelancer'}
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted">
         <span className="inline-flex items-center gap-1.5">
-          <span className="chip chip-employee rounded px-1.5 py-px font-medium">Full-time</span> from Sodeco
+          <span className="chip chip-employee rounded px-1.5 py-px font-medium">Full-time</span> from Sodiwe
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="chip chip-freelancer rounded px-1.5 py-px font-medium">Freelancer</span> added in the app
@@ -266,7 +267,7 @@ export default function HolidaysPage() {
           existing={editing === 'new' ? null : editing}
           defaultDate={selected >= today ? selected : today}
           me={{ email: profile.email, full_name: profile.full_name }}
-          people={isAdmin ? people : null}
+          people={isAdmin ? freelancers : null}
         />
       )}
 
