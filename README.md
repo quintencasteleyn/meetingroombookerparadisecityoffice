@@ -209,7 +209,7 @@ The days off of full-time employees come from Sodiwe's **Link2Prisma** API ([doc
 
 **What to ask Sodiwe (reply to their email):**
 
-- “The connection on our side is ready. Please create the certificate.” They send a certificate file (`.pfx` or `.p12`) and its **password**. Ask for read access to the absences of your employer number(s).
+- “The connection on our side is ready. Please create the certificate.” They send a certificate file (`.pfx` or `.p12`), sometimes with a **password**. Ask for read access to the absences of your employer number(s).
 - Whether the API **only accepts certain IP addresses**. GitHub's servers don't have a fixed IP address, so if Sodiwe requires one, the sync has to run from a machine with a fixed address instead.
 - Whether `https://link2prisma.sodeco.info/link2prisma.svc` (the address in the manual) is also the address for live data.
 - Whether your employees' holidays are registered in the **absence calendar** in Prisma. Only those come through the API.
@@ -224,7 +224,7 @@ The days off of full-time employees come from Sodiwe's **Link2Prisma** API ([doc
    | Name | Value |
    |---|---|
    | `SODIWE_CERT_PFX_BASE64` | paste the text from step 1 |
-   | `SODIWE_CERT_PASSWORD` | the certificate's password |
+   | `SODIWE_CERT_PASSWORD` | *(only if the certificate has a password)* the password. GitHub doesn't accept an empty secret, so leave this one out when there is none. |
    | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → **Project Settings → API Keys** → the **secret** key (`sb_secret_…`), or under *Legacy API keys* the **service_role** key. Keep this one secret: it can read and change everything. |
 
 3. **Variables** tab → **New repository variable**, add:
@@ -236,13 +236,21 @@ The days off of full-time employees come from Sodiwe's **Link2Prisma** API ([doc
    | `SODIWE_EXCLUDE_CODES` | *(optional)* absence codes that should never show, e.g. the sick-leave codes, separated by commas |
    | `SODIWE_ABSENCE_CODES` | *(optional)* if set, **only** these absence codes show |
 
-**Try it without writing anything:** GitHub → **Actions** → **Sync Sodiwe absences** → **Run workflow** → tick *Only show what would change* → **Run workflow**. Open the run → *Sync*. It shows the days off it found, which **absence codes** Sodiwe used (with how often), and which Sodiwe numbers it couldn't match to the employee list. Use the codes to decide whether to fill in `SODIWE_EXCLUDE_CODES`.
+GitHub → **Actions** → **Sync Sodiwe absences** → **Run workflow** lets you choose what to do. Go through the three options in this order:
 
-**Then for real:** run it again without the tick. **Admin → Holidays → Sodiwe connection** now shows the last sync. From now on it runs every night by itself.
+1. **Test the connection only** (needs only the certificate, and `SODIWE_EMPLOYER` for the second half): checks that Sodiwe accepts the certificate and how many days off come back for your employer, with the **absence codes** Sodiwe used and how often. Nothing is saved. Use the codes to decide whether to fill in `SODIWE_EXCLUDE_CODES`.
+2. **Show what would change (write nothing)** (also needs `SUPABASE_SERVICE_ROLE_KEY` and the employee list): how many periods of days off it would add, update or remove, and how many Sodiwe numbers aren't on the employee list.
+3. **Sync for real:** **Admin → Holidays → Sodiwe connection** now shows the last sync, including which Sodiwe numbers are missing from the employee list. From now on it runs every night by itself.
+
+> This repository is public, so anyone can read the logs of its GitHub Actions. The sync therefore only ever prints counts there: never names, email addresses, worker numbers or dates. The details are in **Admin → Holidays**.
+>
+> Sodiwe's certificate uses an older type of encryption, which Node only opens with `--openssl-legacy-provider`. The GitHub job adds that switch; add it too when you run the script yourself.
 
 | The run says | What to do |
 |---|---|
-| *Sodiwe answered 403 … did not accept the certificate* | The certificate is missing, wrong or expired. Check the two certificate secrets, or ask Sodiwe. |
+| *Sodiwe answered 403 … did not accept the certificate* | The certificate is missing, wrong or expired. Check the certificate secret(s), or ask Sodiwe. |
+| *Unsupported PKCS12 PFX data* | Node was started without `--openssl-legacy-provider`. |
+| *Sodiwe answered 503 … upstream connect error* | Something between GitHub and Sodiwe blocked the connection (for example a proxy that can't pass a client certificate on). Ask Sodiwe whether they only allow certain IP addresses. |
 | *401 … no access to this employer* | The certificate's user has no rights on that employer number. Ask Sodiwe to add them. |
 | *404 The given Employer is not found* | `SODIWE_EMPLOYER` is wrong. |
 | *did not finish the request within 15 minutes* | Sodiwe's queue was slow. The next night's run tries again, or start it again by hand. |
@@ -323,5 +331,5 @@ To try the Sodiwe sync with a saved answer from Sodiwe (writes nothing with `--d
 
 ```bash
 SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… \
-  node --experimental-strip-types scripts/sodiwe-sync.mjs --file answer.json --dry-run
+  node --openssl-legacy-provider --experimental-strip-types scripts/sodiwe-sync.mjs --file answer.json --dry-run
 ```

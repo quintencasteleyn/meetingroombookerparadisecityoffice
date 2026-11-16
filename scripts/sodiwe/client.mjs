@@ -23,9 +23,11 @@ const HINTS = {
 }
 
 function explain(err) {
-  const hint = /mac verify|pkcs12|unsupported|bad decrypt|asn1|wrong tag/i.test(err.message)
-    ? ' Is SODIWE_CERT_PASSWORD right, and is SODIWE_CERT_PFX_BASE64 the whole .pfx file in base64?'
-    : ''
+  const hint = /unsupported/i.test(err.message)
+    ? ' The certificate uses an older encryption: run node with --openssl-legacy-provider (the GitHub job does).'
+    : /mac verify|pkcs12|bad decrypt|asn1|wrong tag/i.test(err.message)
+      ? ' Is SODIWE_CERT_PASSWORD right, and is SODIWE_CERT_PFX_BASE64 the whole .pfx file in base64?'
+      : ''
   return new Error(`Could not reach Sodiwe: ${err.message}.${hint}`)
 }
 
