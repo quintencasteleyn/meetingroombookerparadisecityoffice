@@ -25,19 +25,18 @@
 - The sync handles the certificate's older encryption type, and works without a certificate password.
 - This repository is public, so the sync only ever prints **counts** in GitHub's logs: never names, email addresses, worker numbers or dates.
 - Renamed Sodeco → Sodiwe everywhere people see it.
-- Supabase: database updates up to `20261016000000_holiday_planner.sql` run; all functions deployed.
+- Supabase: all database updates run, up to `20261026000000_days_off_freelancers_only.sql` (confirmed on 16 November); all functions deployed.
 
 ## Waiting on you (in this order)
 
-1. **Supabase → SQL Editor:** run `supabase/migrations/20261026000000_days_off_freelancers_only.sql` once, if you haven't yet. *(Not confirmed yet.)*
-2. **GitHub → Settings → Secrets and variables → Actions → Secrets → New repository secret:**
+1. **GitHub → Settings → Secrets and variables → Actions → Secrets → New repository secret:**
    - `SODIWE_CERT_PFX_BASE64`: the certificate as text. Claude prepared it for you (see the chat). No password secret is needed.
-3. **GitHub → … → Variables → New repository variable:**
+2. **GitHub → … → Variables → New repository variable:**
    - `SODIWE_EMPLOYER`: your employer number in Sodiwe (the "external number" of the employer). **See question 1 below.**
-4. **Tell Claude.** Claude then runs *Sync Sodiwe absences → Test the connection only* and reads the result.
-5. **Admin → Holidays → Add or update employees:** paste the full-time employees (email, full name, Sodiwe worker number).
-6. **GitHub secret `SUPABASE_SERVICE_ROLE_KEY`:** from Supabase → Project Settings → API Keys (the secret key). Needed for the real sync.
-7. Then: *Show what would change* → *Sync for real*. From then on it runs every night.
+3. **Tell Claude.** Claude then runs *Sync Sodiwe absences → Test the connection only* and reads the result.
+4. **Admin → Holidays → Add or update employees:** paste the full-time employees (email, full name, Sodiwe worker number).
+5. **GitHub secret `SUPABASE_SERVICE_ROLE_KEY`:** from Supabase → Project Settings → API Keys (the secret key). Needed for the real sync.
+6. Then: *Show what would change* → *Sync for real*. From then on it runs every night.
 
 ## Waiting on Sodiwe
 
@@ -72,5 +71,6 @@
 | #4 | Weekly email schedule off until the GO |
 | #5 | Days off by hand only for freelancers, Sodeco → Sodiwe, meeting rooms paused |
 | #6 | Sodiwe connection test, certificate support, counts-only logs, this status file |
+| #7 | The 20261026 database update can safely be run twice |
 
 Setup details for every step are in the [README](../README.md).

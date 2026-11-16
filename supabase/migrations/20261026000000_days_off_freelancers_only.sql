@@ -1,8 +1,9 @@
 -- =====================================================================
 -- Paradise City Office — days off by hand only for freelancers
 --
--- Run this once in Supabase → SQL Editor → "New query" → Run
--- (after 20261016000000_holiday_planner.sql).
+-- Run this in Supabase → SQL Editor → "New query" → Run
+-- (after 20261016000000_holiday_planner.sql). Running it a second time is
+-- harmless.
 --
 --   * Full-time employees' days off come only from Sodiwe. Nobody adds,
 --     changes or removes them by hand, not even an admin.
@@ -39,9 +40,13 @@ $$;
 -- Security rules for days off
 -- ---------------------------------------------------------------------
 
-drop policy "Members add their own days off, admins anyone's" on public.absences;
-drop policy "Owners and admins change days off" on public.absences;
-drop policy "Owners and admins remove days off" on public.absences;
+-- The old rules, and the new ones in case this file runs a second time.
+drop policy if exists "Members add their own days off, admins anyone's" on public.absences;
+drop policy if exists "Owners and admins change days off" on public.absences;
+drop policy if exists "Owners and admins remove days off" on public.absences;
+drop policy if exists "Freelancers add their own days off, admins a freelancer's" on public.absences;
+drop policy if exists "Freelancers and admins change a freelancer's days off" on public.absences;
+drop policy if exists "Freelancers and admins remove a freelancer's days off" on public.absences;
 
 create policy "Freelancers add their own days off, admins a freelancer's" on public.absences
   for insert to authenticated
@@ -110,6 +115,7 @@ begin
 end;
 $$;
 
+drop trigger if exists profiles_after_work_type_change on public.profiles;
 create trigger profiles_after_work_type_change
   after update of work_type on public.profiles
   for each row execute function public.profiles_after_work_type_change();
@@ -118,4 +124,4 @@ create trigger profiles_after_work_type_change
 -- The temporary switch for full-time employees is no longer needed.
 -- ---------------------------------------------------------------------
 
-alter table public.app_settings drop column employees_add_own;
+alter table public.app_settings drop column if exists employees_add_own;
