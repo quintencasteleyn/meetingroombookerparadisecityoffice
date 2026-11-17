@@ -20,7 +20,7 @@ One place for the Paradise City office: **book the meeting rooms** and see **who
 *Holiday planner*
 
 - See **who is off, by name, on every day**, one or two months at a time. On a phone the months are shown below each other.
-- Everyone is in one calendar: **full-time employees** (their days off come in automatically from **Sodiwe** every night, and only from there: nobody adds them by hand) and **freelancers** (they add their own days off in the app, also half days).
+- Everyone is in one calendar, in three groups: **full-time employees** of Paradise City (their days off come in automatically from **Sodiwe** every night, and only from there: nobody adds them by hand), **freelancers and other**, and the **French and Austrian team** (these two add their own days off in the app, also half days).
 - Public holidays in Belgium are marked. Days when a quarter of the team is off get an amber “n off” badge.
 - Click a day to see everyone who is off, who is off this week, and your own days off.
 - **Every Friday** everyone gets an email: who is off next week (“Full week” or the exact days), plus who has days off planned in the 4 weeks after.
@@ -28,7 +28,7 @@ One place for the Paradise City office: **book the meeting rooms** and see **who
 
 *Account*
 
-- Create an account with their **@paradisecity.be** or **@touquetmusicbeach.com** address (with email confirmation), and say whether they are a **full-time employee or a freelancer**. Colleagues who already had an account are asked once, the first time they sign in.
+- Create an account with their **@paradisecity.be** or **@touquetmusicbeach.com** address (with email confirmation), and choose their **group**: full-time employee, freelancers and other, or French and Austrian team. Full-time employees then confirm who they are by picking their name from the employee list (“Are you one of the following persons?”) the first time they sign in. Colleagues who already had an account are asked once, the first time they sign in.
 - Reset a forgotten password by email.
 - Pick their own **colours** for the background and buttons. The choice is saved on their account and only affects them.
 - Find answers in the **FAQ**, including “How do I change my status? Ask one of the admins”, with the admins' email addresses.
@@ -37,9 +37,9 @@ One place for the Paradise City office: **book the meeting rooms** and see **who
 
 - Change or cancel any booking, or **overrule** it when booking. The original owner gets an email.
 - Rename rooms and change their capacity and colour.
-- Block, unblock or delete colleagues, give other colleagues admin rights, and change anyone's **work status** (full-time employee or freelancer).
+- Block, unblock or delete colleagues, give other colleagues admin rights, and change anyone's **group**.
 - Keep the **list of full-time employees** with their Sodiwe numbers (paste it from Excel). Everyone on it shows up in the planner, also without an account.
-- Add, change or remove days off for freelancers. Full-time employees' days off only come from Sodiwe.
+- Add, change or remove days off for freelancers and other, and for the French and Austrian team. Full-time employees' days off only come from Sodiwe.
 - Preview the weekly email, send themselves a test, send it right away, switch it off, or send it to a distribution list instead of to everyone.
 - See when Sodiwe last synced and whether it worked.
 
@@ -59,13 +59,13 @@ One place for the Paradise City office: **book the meeting rooms** and see **who
 
 If the room booker is already live, you only need these steps. Each one is explained in full further down.
 
-1. **Database:** run [`supabase/migrations/20261016000000_holiday_planner.sql`](supabase/migrations/20261016000000_holiday_planner.sql) and then [`supabase/migrations/20261026000000_days_off_freelancers_only.sql`](supabase/migrations/20261026000000_days_off_freelancers_only.sql) once each in the Supabase SQL Editor ([step 2](#2-create-the-database)).
+1. **Database:** run [`20261016000000_holiday_planner.sql`](supabase/migrations/20261016000000_holiday_planner.sql), [`20261026000000_days_off_freelancers_only.sql`](supabase/migrations/20261026000000_days_off_freelancers_only.sql) and [`20261117000000_three_groups.sql`](supabase/migrations/20261117000000_three_groups.sql) from `supabase/migrations/`, in that order, in the Supabase SQL Editor ([step 2](#2-create-the-database)). Running one of these a second time is harmless.
 2. **Code:** merge this branch into `main`. GitHub then publishes the new website and deploys the new `holiday-digest` function by itself. Check that both **Deploy website** and **Deploy Supabase functions** turn green in the **Actions** tab. If the functions one didn't run, start it with **Run workflow** ([step 5](#5-deploy-the-email-and-admin-functions)).
 3. **Weekly email:** create the `CRON_SECRET` and add it to both Supabase and GitHub ([step 9](#9-the-weekly-holiday-email)).
 4. **Employee list:** paste the full-time employees into **Admin → Holidays** ([step 10](#10-fill-in-the-employee-list)).
-5. **Sodiwe:** when Sodiwe has sent the certificate, connect it ([step 11](#11-connect-sodiwe)). Until then the planner only shows the freelancers' days off.
+5. **Sodiwe:** when Sodiwe has sent the certificate, connect it ([step 11](#11-connect-sodiwe)). Until then the planner only shows the days off people add themselves.
 
-Everyone who already has an account gets the question “Full-time employee or freelancer?” the next time they sign in. People on the employee list are set to full-time automatically.
+Everyone who already has an account is asked which group they're in the next time they sign in. People on the employee list are set to full-time automatically.
 
 ---
 
@@ -94,7 +94,8 @@ Then run the other files in `supabase/migrations/` the same way, **in date order
 | `20261006000000_second_email_domain.sql` | `@touquetmusicbeach.com` addresses can sign up too |
 | `20261007000000_waiting_list_weekdays.sql` | waiting list, Monday to Friday only |
 | `20261016000000_holiday_planner.sql` | the holiday planner: work status, employee list, days off, weekly email settings |
-| `20261026000000_days_off_freelancers_only.sql` | days off are only added by hand for freelancers; full-time employees' come from Sodiwe only |
+| `20261026000000_days_off_freelancers_only.sql` | days off are only added by hand for people who aren't full-time employees; full-time employees' come from Sodiwe only |
+| `20261117000000_three_groups.sql` | three groups (full-time employee, freelancers and other, French and Austrian team); full-time employees pick their name from the employee list |
 
 > Tip: to check what's already been run, open **Table Editor**. If you see the tables `staff`, `absences` and `app_settings`, the holiday planner file has been run.
 
@@ -197,7 +198,7 @@ Everyone on the list:
 - is a full-time employee automatically (also when they sign up later);
 - gets their days off from Sodiwe, matched on the worker number.
 
-Freelancers don't go on this list. They create an account and choose *Freelancer*.
+Only Paradise City's full-time employees (the people in Sodiwe) go on this list. Freelancers and the French and Austrian team create an account and choose their group. If a full-time employee's email on the list is wrong, that's fine: when they pick their name at first sign-in, the list takes over the address of their account.
 
 ### 11. Connect Sodiwe
 
@@ -262,7 +263,7 @@ GitHub → **Actions** → **Sync Sodiwe absences** → **Run workflow** lets yo
 | Rule | Value |
 |---|---|
 | Who can sign up | Only `@paradisecity.be` and `@touquetmusicbeach.com` addresses |
-| Work status | Chosen at sign-up (or first sign-in); after that only an admin changes it. On the employee list = full-time |
+| Group | Chosen at sign-up (or first sign-in); after that only an admin changes it. On the employee list = full-time employee |
 | Opening hours | 07:00–20:00, Monday to Friday (Brussels time) |
 | Booking length | 15 minutes up to the full day, in 15-minute steps |
 | How far ahead | 3 months for rooms; 2 years for days off |
@@ -270,7 +271,7 @@ GitHub → **Actions** → **Sync Sodiwe absences** → **Run workflow** lets yo
 | Taken slot | Join the waiting list; first come, first served when it frees up |
 | Recurring bookings | Weekdays, weekly, every 2 weeks, monthly (max 3 months) |
 | Changing bookings | Owners change or cancel their own; admins change, cancel or overrule all |
-| Days off | Freelancers add and change their own, and admins can do it for them; full-time employees' days off only come from Sodiwe |
+| Days off | Freelancers and other, and the French and Austrian team, add and change their own, and admins can do it for them; full-time employees' days off only come from Sodiwe |
 | Weekly email | Friday afternoons (14:00–15:00), about next week plus the 4 weeks after; once per week. Schedule currently off |
 | Colours | Personal per account |
 
@@ -309,13 +310,14 @@ Changes to the SQL go in a **new** file in `supabase/migrations/`, which you run
 | *Microsoft login failed* in the logs | Wrong tenant/client ID or secret, or the secret expired. |
 | *Sending email failed (403)* in the logs | Mail.Send is missing admin consent, or the mailbox in `MAIL_FROM` isn't allowed for the app. |
 | Admin page says it can't load users | The `admin-users` function isn't deployed (step 5). |
-| The Holidays page is empty or shows an error | The files `20261016000000_holiday_planner.sql` and `20261026000000_days_off_freelancers_only.sql` haven't been run yet (step 2). |
+| The Holidays page is empty or shows an error | One of the database updates in `supabase/migrations/` hasn't been run yet (step 2). |
 | **Preview** / **Send me a test** gives an error | The `holiday-digest` function isn't deployed (step 5), or the Microsoft secrets are missing (step 6). |
 | **Weekly holiday email** action fails with *Wrong CRON_SECRET* | The `CRON_SECRET` in GitHub and in Supabase aren't exactly the same (step 9). |
 | **Sync Sodiwe absences** says *not connected yet* | The secret `SODIWE_CERT_PFX_BASE64` is missing (step 11). This is fine until Sodiwe has sent the certificate. |
 | Sync says *mac verify failure* | Wrong certificate password, or the base64 text isn't the whole file (step 11). |
 | Sync says *Sodiwe numbers not on the employee list* | Those people are missing in **Admin → Holidays** or have another number there. |
-| Someone can't add days off | Only freelancers add days off by hand; full-time employees' come from Sodiwe. Check their status in **Admin → Users**. |
+| Someone can't add days off | Full-time employees' days off come from Sodiwe only. Check their group in **Admin → Users**. |
+| *Not linked to the employee list* in Admin → Users | A full-time employee whose account doesn't match an entry on the employee list. Fix their email in **Admin → Holidays** (paste their line again with the right email). |
 
 ## Developing locally
 

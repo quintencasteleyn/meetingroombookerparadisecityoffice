@@ -25,7 +25,13 @@ export function chipClass(absence: Absence, person: Person | undefined, me: stri
   const type = person?.work_type ?? (absence.source === 'sodeco' ? 'employee' : null)
   return [
     'chip',
-    type === 'employee' ? 'chip-employee' : type === 'freelancer' ? 'chip-freelancer' : 'chip-unknown',
+    type === 'employee'
+      ? 'chip-employee'
+      : type === 'freelancer'
+        ? 'chip-freelancer'
+        : type === 'france_austria'
+          ? 'chip-team'
+          : 'chip-unknown',
     absence.person_email === me ? 'chip-me' : '',
     absence.status === 'requested' ? 'chip-requested' : '',
   ].join(' ')

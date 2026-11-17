@@ -4,7 +4,8 @@
 
 /** 'half' = half a day when Sodiwe doesn't say whether it's the morning or the afternoon. */
 export type DayPart = 'full' | 'am' | 'pm' | 'half'
-export type WorkType = 'employee' | 'freelancer'
+/** employee = full-time (days off from Sodiwe); the other two add their own. */
+export type WorkType = 'employee' | 'freelancer' | 'france_austria'
 
 export interface Absence {
   id: string

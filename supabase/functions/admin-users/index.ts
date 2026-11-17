@@ -1,5 +1,5 @@
 // Admin-only user management: list, block/unblock, delete, change role
-// and work status (full-time employee or freelancer).
+// and group (full-time employee, freelancers and other, French and Austrian team).
 
 import { corsHeaders, json } from '../_shared/cors.ts'
 import { adminClient, appUrl, getCaller } from '../_shared/supabase.ts'
@@ -59,7 +59,9 @@ Deno.serve(async (req) => {
 
     // Admins may change their own work status; everything else only for others.
     if (body.action === 'set_work_type') {
-      if (body.workType !== 'employee' && body.workType !== 'freelancer') return json({ error: 'Unknown status.' }, 400)
+      if (!['employee', 'freelancer', 'france_austria'].includes(body.workType ?? '')) {
+        return json({ error: 'Unknown group.' }, 400)
+      }
       const { data: changed, error } = await admin
         .from('profiles')
         .update({ work_type: body.workType })

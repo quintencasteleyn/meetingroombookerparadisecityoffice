@@ -11,6 +11,7 @@ import { friendlyError, supabase } from '../lib/supabase'
 import { nowInBrussels } from '../lib/time'
 import {
   ABSENCE_COLUMNS,
+  addsOwnDaysOff,
   absencesByDay,
   addDays,
   mondayOf,
@@ -24,7 +25,7 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ]
 
-type Filter = 'all' | 'employee' | 'freelancer'
+type Filter = 'all' | 'employee' | 'freelancer' | 'france_austria'
 
 /** 'YYYY-MM-01' shifted by n months. */
 function shiftMonth(month: string, n: number): string {
@@ -72,15 +73,15 @@ export default function HolidaysPage() {
 
   const me = profile?.email ?? ''
   const personOf = useCallback((email: string) => byEmail.get(email), [byEmail])
-  // Days off are only added by hand for freelancers: by themselves, or by an admin.
-  // Full-time employees' days off come from Sodiwe only.
-  const canAddOwn = profile?.work_type === 'freelancer'
-  const freelancers = useMemo(() => people.filter((p) => p.work_type === 'freelancer'), [people])
-  const canAddForOthers = isAdmin && freelancers.length > 0
+  // Days off are added by hand by everyone except full-time employees (whose days
+  // off come from Sodiwe only): by themselves, or by an admin for them.
+  const canAddOwn = addsOwnDaysOff(profile?.work_type)
+  const selfReporters = useMemo(() => people.filter((p) => addsOwnDaysOff(p.work_type)), [people])
+  const canAddForOthers = isAdmin && selfReporters.length > 0
   const canChange = useCallback(
     (a: Absence) =>
       a.source === 'manual' &&
-      byEmail.get(a.person_email)?.work_type === 'freelancer' &&
+      addsOwnDaysOff(byEmail.get(a.person_email)?.work_type) &&
       (isAdmin || (a.person_email === me && canAddOwn)),
     [isAdmin, me, canAddOwn, byEmail],
   )
@@ -196,7 +197,8 @@ export default function HolidaysPage() {
         >
           <option value="all">Everyone</option>
           <option value="employee">Full-time only</option>
-          <option value="freelancer">Freelancers only</option>
+          <option value="freelancer">Freelancers and other</option>
+          <option value="france_austria">French and Austrian team</option>
         </select>
         {isEmployee && (
           <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-xs text-muted">
@@ -205,7 +207,7 @@ export default function HolidaysPage() {
         )}
         {(canAddOwn || canAddForOthers) && (
           <Button variant="primary" size="sm" icon={<Plus className="size-4" />} onClick={() => setEditing('new')}>
-            {canAddOwn ? 'Add days off' : 'Add days off for a freelancer'}
+            {canAddOwn ? 'Add days off' : 'Add days off for a colleague'}
           </Button>
         )}
       </div>
@@ -215,7 +217,10 @@ export default function HolidaysPage() {
           <span className="chip chip-employee rounded px-1.5 py-px font-medium">Full-time</span> from Sodiwe
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="chip chip-freelancer rounded px-1.5 py-px font-medium">Freelancer</span> added in the app
+          <span className="chip chip-freelancer rounded px-1.5 py-px font-medium">Freelancer or other</span> added in the app
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="chip chip-team rounded px-1.5 py-px font-medium">French/Austrian team</span> added in the app
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="chip chip-employee chip-me rounded px-1.5 py-px font-medium">You</span> solid = your days
@@ -267,7 +272,7 @@ export default function HolidaysPage() {
           existing={editing === 'new' ? null : editing}
           defaultDate={selected >= today ? selected : today}
           me={{ email: profile.email, full_name: profile.full_name }}
-          people={isAdmin ? freelancers : null}
+          people={isAdmin ? selfReporters : null}
         />
       )}
 

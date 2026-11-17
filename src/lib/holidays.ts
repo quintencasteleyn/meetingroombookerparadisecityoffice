@@ -21,6 +21,11 @@ export interface AppSettings {
 
 export const ABSENCE_COLUMNS = 'id, person_email, start_date, end_date, day_part, status, source'
 
+/** Everyone except full-time employees adds their own days off. */
+export function addsOwnDaysOff(type: string | null | undefined): boolean {
+  return type === 'freelancer' || type === 'france_austria'
+}
+
 /** Days off overlapping [from, to] (ISO dates), refreshed live when anyone changes them. */
 export function useAbsences(from: string, to: string) {
   const [absences, setAbsences] = useState<Absence[]>([])

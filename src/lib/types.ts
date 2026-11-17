@@ -2,8 +2,12 @@ import type { ThemeSettings } from './theme'
 
 export type Role = 'member' | 'admin'
 
-/** Full-time employees' days off come from Sodiwe; freelancers add their own. */
-export type WorkType = 'employee' | 'freelancer'
+/**
+ * The three groups of colleagues. Full-time employees (Paradise City, in
+ * Sodiwe) get their days off from Sodiwe; freelancers and other, and the
+ * French and Austrian team, add their own.
+ */
+export type WorkType = 'employee' | 'freelancer' | 'france_austria'
 
 export interface Profile {
   id: string

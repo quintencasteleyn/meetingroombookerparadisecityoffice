@@ -11,7 +11,7 @@ interface AbsenceDialogProps {
   existing: Absence | null
   defaultDate: string
   me: { email: string; full_name: string }
-  /** Admins can add days off for these people (the freelancers). */
+  /** Admins can add days off for these people (everyone except full-time employees). */
   people: Person[] | null
 }
 
@@ -77,7 +77,7 @@ export default function AbsenceDialog({ onClose, onSaved, existing, defaultDate,
           these days. Weekends and public holidays don't count.
         </p>
         {people && !existing && (
-          <Field label="Freelancer" hint="Full-time employees' days off come from Sodiwe.">
+          <Field label="Who" hint="Full-time employees' days off come from Sodiwe, so they aren't in this list.">
             {(id) => (
               <select id={id} className={inputClass} value={person} onChange={(e) => setPerson(e.target.value)}>
                 {people.map((p) => (

@@ -2,6 +2,7 @@ import { Pencil, Trash2 } from 'lucide-react'
 import { Avatar } from '../ui'
 import { partLabel, publicHolidayName, rangeLabel, weekdayOf, type Absence, type Person } from '../../lib/holidays'
 import { nameOf } from './MonthGrid'
+import { WORK_TYPE_SHORT } from '../WorkTypeChoice'
 
 const LONG_WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const LONG_MONTHS = [
@@ -16,7 +17,7 @@ function longDay(day: string): string {
 
 function sourceText(absence: Absence, person: Person | undefined): string {
   const type = person?.work_type ?? (absence.source === 'sodeco' ? 'employee' : null)
-  const who = type === 'employee' ? 'Full-time' : type === 'freelancer' ? 'Freelancer' : 'Status not set'
+  const who = type ? WORK_TYPE_SHORT[type] : 'Group not chosen yet'
   const where = absence.source === 'sodeco' ? 'from Sodiwe' : 'added in the app'
   return `${who} · ${where}`
 }
