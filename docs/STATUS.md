@@ -1,6 +1,6 @@
 # Paradise City Office: status
 
-*Last updated: 16 November 2026*
+*Last updated: 17 November 2026*
 
 ## At a glance
 
@@ -25,6 +25,8 @@
 - The sync handles the certificate's older encryption type, and works without a certificate password.
 - This repository is public, so the sync only ever prints **counts** in GitHub's logs: never names, email addresses, worker numbers or dates.
 - Renamed Sodeco → Sodiwe everywhere people see it.
+- Received: Paradise City's employer number in Sodiwe is **29717**. Touquet Music Beach is not in Sodiwe.
+- Received: Sodiwe's list of employees (8 people at PARADISE CITY BV) with names and worker numbers. It's kept out of this repository because it's personal data; it goes into Admin → Holidays. It has no email addresses, so Claude suggested firstname@paradisecity.be for each, to be checked before pasting.
 - Supabase: all database updates run, up to `20261026000000_days_off_freelancers_only.sql` (confirmed on 16 November); all functions deployed.
 
 ## Waiting on you (in this order)
@@ -32,7 +34,7 @@
 1. **GitHub → Settings → Secrets and variables → Actions → Secrets → New repository secret:**
    - `SODIWE_CERT_PFX_BASE64`: the certificate as text. Claude prepared it for you (see the chat). No password secret is needed.
 2. **GitHub → … → Variables → New repository variable:**
-   - `SODIWE_EMPLOYER`: your employer number in Sodiwe (the "external number" of the employer). **See question 1 below.**
+   - `SODIWE_EMPLOYER`: `29717` (Paradise City's employer number in Sodiwe).
 3. **Tell Claude.** Claude then runs *Sync Sodiwe absences → Test the connection only* and reads the result.
 4. **Admin → Holidays → Add or update employees:** paste the full-time employees (email, full name, Sodiwe worker number).
 5. **GitHub secret `SUPABASE_SERVICE_ROLE_KEY`:** from Supabase → Project Settings → API Keys (the secret key). Needed for the real sync.
@@ -48,7 +50,7 @@
 
 ## Open questions for you
 
-1. **Employer number:** what is your employer number in Sodiwe? Is it one number, or one per company (Paradise City / Touquet Music Beach)?
+1. **Touquet Music Beach colleagues:** they aren't in Sodiwe, so no holidays come in for them. Should they be set as *freelancer* (they add their own days off), or stay out of the planner?
 2. **Sick leave:** once the connection test shows which absence codes Sodiwe uses, should sick-leave codes be left out of the planner?
 3. **Weekly email, for the GO:**
    - Sender address: the room-booking mailbox, or another one?
