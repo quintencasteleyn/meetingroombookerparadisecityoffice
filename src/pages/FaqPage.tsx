@@ -46,14 +46,18 @@ export default function FaqPage() {
       </p>
 
       <Group title="Your account">
-        <Question q="How do I change my status (full-time employee or freelancer)?" open>
+        <Question q="How do I change my status (my group)?" open>
           <p>Ask one of the admins. They can change it for you in Admin → Users.</p>
           {adminList}
         </Question>
-        <Question q="Why do I have to choose full-time employee or freelancer?">
+        <Question q="Why do I have to choose a group?">
           <p>
-            Full-time employees' days off come in automatically from Sodiwe, our HR system. Freelancers aren't in Sodiwe,
-            so they add their own days off here. Your choice tells the planner where to look.
+            There are three groups: full-time employees of Paradise City, freelancers and other, and the French and
+            Austrian team. Full-time employees' days off come in automatically from Sodiwe, our HR system. The other two
+            groups aren't in Sodiwe, so they add their own days off here. Your group tells the planner where to look.
+          </p>
+          <p>
+            Full-time employees confirm who they are by picking their name from the list the first time they sign in.
           </p>
         </Question>
         <Question q="How do I change my name, colours or password?">
@@ -72,7 +76,7 @@ export default function FaqPage() {
             come from Sodiwe.
           </p>
         </Question>
-        <Question q="I'm a freelancer. How do I add my days off?">
+        <Question q="I'm a freelancer or in the French or Austrian team. How do I add my days off?">
           <p>
             Open Holidays and click “Add days off”. Pick the first and last day, or a morning or afternoon for a half
             day. Your colleagues see them straight away.
@@ -101,7 +105,7 @@ export default function FaqPage() {
         </Question>
         <Question q="My days off are missing or wrong.">
           <p>
-            Full-time employees: check Sodiwe first. The planner copies it every night. Freelancers: change them
+            Full-time employees: check Sodiwe first. The planner copies it every night. Everyone else: change them
             yourself. Still not right? Ask one of the admins.
           </p>
           {adminList}

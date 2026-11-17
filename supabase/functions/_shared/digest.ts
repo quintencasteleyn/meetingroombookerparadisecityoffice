@@ -76,7 +76,7 @@ export function buildDigest(
       sections,
       button: { text: 'Open the holiday planner', url: link },
       footnote:
-        "Full-time employees' days off come from Sodiwe. Freelancers add their own in the holiday planner. Something not right? Let one of the admins know.",
+        "Full-time employees' days off come from Sodiwe. Everyone else adds their own in the holiday planner. Something not right? Let one of the admins know.",
     }),
   }
 }

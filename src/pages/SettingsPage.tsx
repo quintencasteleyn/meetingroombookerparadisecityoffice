@@ -215,7 +215,7 @@ function WorkStatusCard() {
   const admins = useAdmins()
   const status = profile?.work_type
   return (
-    <Card title="Work status" subtitle="Decides where your days off in the holiday planner come from.">
+    <Card title="Your group" subtitle="Decides where your days off in the holiday planner come from.">
       <p className="text-sm">
         You are registered as{' '}
         <span className="rounded-md bg-primary/10 px-2 py-0.5 font-semibold text-primary">
@@ -225,7 +225,7 @@ function WorkStatusCard() {
       <p className="mt-3 text-sm text-muted">
         {status === 'employee'
           ? 'Your days off come in automatically from Sodiwe.'
-          : status === 'freelancer'
+          : status
             ? 'You add your own days off in the holiday planner.'
             : ''}{' '}
         Is this wrong? Ask one of the admins to change it:{' '}

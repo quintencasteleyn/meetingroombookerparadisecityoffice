@@ -10,6 +10,7 @@ import type { Role, Room, WorkType } from '../lib/types'
 import { appLink } from '../lib/mailto'
 import { ALLOWED_DOMAINS_TEXT } from './AuthPages'
 import HolidaysAdmin from '../components/admin/HolidaysAdmin'
+import { WORK_TYPE_LABEL } from '../components/WorkTypeChoice'
 import { ROOMS_ENABLED } from '../lib/features'
 
 interface AdminUser {
@@ -125,7 +126,7 @@ function UsersPanel() {
   async function setWorkType(user: AdminUser, workType: WorkType) {
     try {
       await callFunction('admin-users', { action: 'set_work_type', userId: user.id, workType })
-      toast(`${user.full_name} is now ${workType === 'employee' ? 'a full-time employee' : 'a freelancer'}.`)
+      toast(`${user.full_name}: ${WORK_TYPE_LABEL[workType]}.`)
       await load()
     } catch (err) {
       toast(friendlyError(err), 'error')
@@ -241,10 +242,17 @@ function UsersPanel() {
                         Status not chosen yet
                       </option>
                     )}
-                    <option value="employee">Full-time employee</option>
-                    <option value="freelancer">Freelancer</option>
+                    <option value="employee">{WORK_TYPE_LABEL.employee}</option>
+                    <option value="freelancer">{WORK_TYPE_LABEL.freelancer}</option>
+                    <option value="france_austria">{WORK_TYPE_LABEL.france_austria}</option>
                   </select>
-                  {u.on_employee_list && <span className="text-[11px] text-muted">On the employee list</span>}
+                  {u.on_employee_list ? (
+                    <span className="text-[11px] text-muted">On the employee list</span>
+                  ) : (
+                    u.work_type === 'employee' && (
+                      <span className="text-[11px] text-amber-600">Not linked to the employee list</span>
+                    )
+                  )}
                 </div>
                 {!me && (
                   <div className="flex flex-wrap gap-1.5 sm:justify-end">

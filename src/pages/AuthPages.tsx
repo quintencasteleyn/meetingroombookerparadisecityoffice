@@ -206,7 +206,7 @@ export function SignupPage() {
     if (!isAllowedEmail(cleanEmail)) return setError(`Please use your ${ALLOWED_DOMAINS_TEXT} email address.`)
     if (password.length < MIN_PASSWORD) return setError(`Your password needs at least ${MIN_PASSWORD} characters.`)
     if (password !== confirm) return setError("The passwords don't match.")
-    if (!workType) return setError('Choose whether you are a full-time employee or a freelancer.')
+    if (!workType) return setError('Choose which group you are in.')
 
     setLoading(true)
     const { data, error: err } = await supabase.auth.signUp({
@@ -281,9 +281,18 @@ export function SignupPage() {
         </Field>
         <fieldset>
           <legend className="mb-1.5 block text-[13px] font-medium text-fg">
-            How do you work with us? <span className="text-red-500">*</span>
+            Which group are you in? <span className="text-red-500">*</span>
           </legend>
-          <WorkTypeChoice value={workType} onChange={setWorkType} name="signup-work-type" />
+          <WorkTypeChoice
+            value={workType}
+            onChange={setWorkType}
+            name="signup-work-type"
+            employeeExtra={
+              <p className="text-xs text-muted">
+                After you sign in, you pick your name from the list of Paradise City employees.
+              </p>
+            }
+          />
         </fieldset>
         {error && <Alert tone="error">{error}</Alert>}
         <Button type="submit" variant="primary" className="w-full" loading={loading}>
