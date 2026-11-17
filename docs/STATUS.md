@@ -8,11 +8,11 @@
 |---|---|
 | Website | ✅ Live at https://quintencasteleyn.github.io/meetingroombookerparadisecityoffice/ |
 | Holiday planner | ✅ Live. Freelancers and other, and the French and Austrian team, add their own days off; full-time employees' days off will come from Sodiwe |
-| Three groups | 🟡 Built (full-time employee, freelancers and other, French and Austrian team). **Goes live once the new database update has run** (see below) |
+| Three groups | ✅ Live (full-time employee, freelancers and other, French and Austrian team) |
 | FAQ | ✅ Live, including "How do I change my status? Ask one of the admins" |
 | Meeting rooms | ⏸️ Paused: hidden from the menu, Admin and the FAQ. Bookings are kept |
 | Weekly "who's off" email | ⏸️ Built and tested, but the Friday schedule is **off** until your GO |
-| Sodiwe connection | 🟡 Certificate received (valid until 30 May 2036) and code ready. **The first real test needs the certificate in GitHub** (see below) |
+| Sodiwe connection | 🟡 The certificate works (valid until 30 May 2036). **Sodiwe doesn't recognise the employer number yet:** waiting on Sodiwe (see below) |
 
 ## Done
 
@@ -27,29 +27,24 @@
 - The sync handles the certificate's older encryption type, and works without a certificate password.
 - This repository is public, so the sync only ever prints **counts** in GitHub's logs: never names, email addresses, worker numbers or dates.
 - Renamed Sodeco → Sodiwe everywhere people see it.
-- Received: Paradise City's employer number in Sodiwe is **29717**. Touquet Music Beach is not in Sodiwe (its colleagues choose the French and Austrian team or freelancers and other).
+- Received: Paradise City's number in Sodiwe's files is **29717** (Sodiwe's API doesn't accept it as the employer number, see below). Touquet Music Beach is not in Sodiwe (its colleagues choose the French and Austrian team or freelancers and other).
 - Received: Sodiwe's list of employees (8 people at PARADISE CITY BV) with names and worker numbers. It's kept out of this repository because it's personal data; it goes into Admin → Holidays. It has no email addresses, so Claude suggested firstname@paradisecity.be for each, to be checked before pasting.
-- Supabase: all database updates run, up to `20261026000000_days_off_freelancers_only.sql` (confirmed on 16 November); all functions deployed.
+- Supabase: all database updates run, up to `20261117000000_three_groups.sql` (17 November); all functions deployed.
+- Connection test on 17 November: Sodiwe **accepts the certificate** from GitHub. So there is no IP restriction, and `link2prisma.sodeco.info/link2prisma.svc` is the right address.
 
 ## Waiting on you (in this order)
 
-1. **Supabase → SQL Editor:** run `supabase/migrations/20261117000000_three_groups.sql` (the three groups). Then tell Claude, who puts the matching website update live.
-2. **GitHub → Settings → Secrets and variables → Actions → Secrets → New repository secret:**
-   - `SODIWE_CERT_PFX_BASE64`: the certificate as text. Claude prepared it for you (see the chat). No password secret is needed.
-3. **GitHub → … → Variables → New repository variable:**
-   - `SODIWE_EMPLOYER`: `29717` (Paradise City's employer number in Sodiwe).
-4. **Tell Claude.** Claude then runs *Sync Sodiwe absences → Test the connection only* and reads the result.
-5. **Admin → Holidays → Add or update employees:** paste the full-time employees (email, full name, Sodiwe worker number). A wrong email is fixed automatically when that person picks their name at first sign-in.
-6. **GitHub secret `SUPABASE_SERVICE_ROLE_KEY`:** from Supabase → Project Settings → API Keys (the secret key). Needed for the real sync.
-7. Then: *Show what would change* → *Sync for real*. From then on it runs every night.
+1. **Ask Sodiwe for the employer number** the API expects (see "Waiting on Sodiwe"). Put it in **GitHub → Settings → Secrets and variables → Actions → Variables → `SODIWE_EMPLOYER`**, then tell Claude, who runs the connection test again.
+2. **Admin → Holidays → Add or update employees:** paste the full-time employees (email, full name, Sodiwe worker number). A wrong email is fixed automatically when that person picks their name at first sign-in.
+3. **GitHub secret `SUPABASE_SERVICE_ROLE_KEY`:** from Supabase → Project Settings → API Keys (the secret key). Needed for the real sync.
+4. Then: *Show what would change* → *Sync for real*. From then on it runs every night.
 
 ## Waiting on Sodiwe
 
-- The answers to your email:
-  - Do they only accept certain IP addresses?
-  - Is `link2prisma.sodeco.info/link2prisma.svc` also the address for live data?
-  - Are your employees' holidays registered in the absence calendar in Prisma?
-- The connection test will show the first two answers in practice.
+- **The employer number for the API.** Every request for the absences gets the answer *"404.01 The given Employer is not found"*. Tried in the `Employer` header: `29717`, `029717` and `1518-029717` (the number on the payslips). Sodiwe's manual asks for the employer's *external number* in Prisma. Ask Sodiwe:
+  - which exact value goes in the `Employer` header for PARADISE CITY BV;
+  - whether the certificate's user ("Sodiwe PARADISECITY") has read rights on that employer.
+- Still open from your first email: are your employees' holidays registered in the absence calendar in Prisma? (Only those come through the API.)
 
 ## Open questions for you
 
@@ -78,5 +73,7 @@
 | #7 | The 20261026 database update can safely be run twice |
 | #8 | Status: employer number and employee list received |
 | #9 | Three groups: full-time employee, freelancers and other, French and Austrian team |
+| #10 | The Sodiwe sync shows Sodiwe's own reason when it refuses a request |
+| #11 | Status: the certificate works, the employer number isn't recognised yet |
 
 Setup details for every step are in the [README](../README.md).
