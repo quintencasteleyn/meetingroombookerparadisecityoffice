@@ -22,6 +22,47 @@ const HINTS = {
   '404': 'Sodiwe does not know this employer or worker number. Check SODIWE_EMPLOYER.',
 }
 
+function parseBody(text) {
+  try {
+    return text ? JSON.parse(text) : null
+  } catch {
+    return text // not JSON: the text as is
+  }
+}
+
+/** A request identifier on its own, like "6fda4aea-8700-4adb-9d80-0c02df490f3b". */
+function identifierIn(body) {
+  const m = typeof body === 'string' ? body.trim().match(/^"?([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})"?$/i) : null
+  return m ? m[1] : null
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+/**
+ * Why Sodiwe refused a request: its status in /Result/{id}. Only the status
+ * code and description are used (never the response data), so this can go in
+ * the public log.
+ */
+async function refusalReason(client, id, { tries = 6, delayMs = 5000 } = {}) {
+  for (let i = 0; i < tries; i++) {
+    let result
+    try {
+      result = (await client.get(`Result/${encodeURIComponent(id)}`)).body
+    } catch (err) {
+      result = err.body
+    }
+    if (result && typeof result === 'object') {
+      const code = String(result.Statuscode ?? '')
+      if (!WAITING.has(code)) {
+        const hint = HINTS[code.slice(0, 3)] ?? ''
+        return `Its status: ${code} ${result.StatusDescription ?? '(no description)'}. ${hint}`.trim()
+      }
+    }
+    if (i < tries - 1) await sleep(delayMs)
+  }
+  return `Sodiwe gave no reason (request ${id}).`
+}
+
 function explain(err) {
   const hint = /unsupported/i.test(err.message)
     ? ' The certificate uses an older encryption: run node with --openssl-legacy-provider (the GitHub job does).'
@@ -46,16 +87,13 @@ export function createClient({ baseUrl, pfx, passphrase }) {
           const text = Buffer.concat(chunks).toString('utf8')
           if (res.statusCode >= 400) {
             const extra = res.statusCode === 403 ? ' (Sodiwe did not accept the certificate.)' : ''
-            reject(new Error(`Sodiwe answered ${res.statusCode} for ${url.pathname}${extra}: ${text.slice(0, 300)}`))
+            const err = new Error(`Sodiwe answered ${res.statusCode} for ${url.pathname}${extra}: ${text.slice(0, 300)}`)
+            err.status = res.statusCode
+            err.body = parseBody(text)
+            reject(err)
             return
           }
-          let body = text
-          try {
-            body = text ? JSON.parse(text) : null
-          } catch {
-            // not JSON: return the text as is
-          }
-          resolve({ status: res.statusCode, body })
+          resolve({ status: res.statusCode, body: parseBody(text) })
         })
       }
       const options = {
@@ -112,7 +150,16 @@ export function dataOfResult(result) {
  * Sodiwe's own program works through the queue, so this can take a few minutes.
  */
 export async function fetchData(client, path, employer, { delayMs = 10_000, maxWaitMs = 15 * 60_000, log = () => {} } = {}) {
-  const first = await client.get(path, employer ? { Employer: employer } : {})
+  let first
+  try {
+    first = await client.get(path, employer ? { Employer: employer } : {})
+  } catch (err) {
+    // Link2Prisma can refuse a request straight away and still give it an
+    // identifier; /Result/{id} then says why.
+    const id = identifierIn(err.body)
+    if (!id) throw err
+    throw new Error(`Sodiwe refused the request (HTTP ${err.status}). ${await refusalReason(client, id)}`)
+  }
   if (first.status !== 202) return first.body // answered right away
   const id = identifierOf(first.body)
   log(`Sodiwe queued the request (${id}), waiting for the result…`)
