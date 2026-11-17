@@ -26,7 +26,7 @@
 - This repository is public, so the sync only ever prints **counts** in GitHub's logs: never names, email addresses, worker numbers or dates.
 - Renamed Sodeco → Sodiwe everywhere people see it.
 - Received: Paradise City's employer number in Sodiwe is **29717**. Touquet Music Beach is not in Sodiwe.
-- Received: Sodiwe's list of employees with names and worker numbers (kept out of this repository, as it is personal data; it goes into Admin → Holidays).
+- Received: Sodiwe's list of employees (8 people at PARADISE CITY BV) with names and worker numbers. It's kept out of this repository because it's personal data; it goes into Admin → Holidays. It has no email addresses, so Claude suggested firstname@paradisecity.be for each, to be checked before pasting.
 - Supabase: all database updates run, up to `20261026000000_days_off_freelancers_only.sql` (confirmed on 16 November); all functions deployed.
 
 ## Waiting on you (in this order)
