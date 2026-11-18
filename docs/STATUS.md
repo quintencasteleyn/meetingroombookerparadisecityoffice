@@ -1,6 +1,6 @@
 # Paradise City Office: status
 
-*Last updated: 17 November 2026*
+*Last updated: 18 November 2026*
 
 ## At a glance
 
@@ -12,7 +12,7 @@
 | FAQ | ✅ Live, including "How do I change my status? Ask one of the admins" |
 | Meeting rooms | ⏸️ Paused: hidden from the menu, Admin and the FAQ. Bookings are kept |
 | Weekly "who's off" email | ⏸️ Built and tested, but the Friday schedule is **off** until your GO |
-| Sodiwe connection | 🟡 The certificate works (valid until 30 May 2036). **Sodiwe doesn't recognise the employer number yet:** waiting on Sodiwe (see below) |
+| Sodiwe connection | 🟡 The certificate works (valid until 30 May 2036). **The certificate's user can't see employer 29717 yet:** waiting on Sodiwe (see below) |
 
 ## Done
 
@@ -27,23 +27,21 @@
 - The sync handles the certificate's older encryption type, and works without a certificate password.
 - This repository is public, so the sync only ever prints **counts** in GitHub's logs: never names, email addresses, worker numbers or dates.
 - Renamed Sodeco → Sodiwe everywhere people see it.
-- Received: Paradise City's number in Sodiwe's files is **29717** (Sodiwe's API doesn't accept it as the employer number, see below). Touquet Music Beach is not in Sodiwe (its colleagues choose the French and Austrian team or freelancers and other).
+- Received: Paradise City's employer number in Sodiwe is **29717** (Sodiwe confirmed on 18 November that this is the value for the `Employer` header; it's in `SODIWE_EMPLOYER`). Touquet Music Beach is not in Sodiwe (its colleagues choose the French and Austrian team or freelancers and other).
 - Received: Sodiwe's list of employees (8 people at PARADISE CITY BV) with names and worker numbers. It's kept out of this repository because it's personal data; it goes into Admin → Holidays. It has no email addresses, so Claude suggested firstname@paradisecity.be for each, to be checked before pasting.
 - Supabase: all database updates run, up to `20261117000000_three_groups.sql` (17 November); all functions deployed.
 - Connection test on 17 November: Sodiwe **accepts the certificate** from GitHub. So there is no IP restriction, and `link2prisma.sodeco.info/link2prisma.svc` is the right address.
 
 ## Waiting on you (in this order)
 
-1. **Ask Sodiwe for the employer number** the API expects (see "Waiting on Sodiwe"). Put it in **GitHub → Settings → Secrets and variables → Actions → Variables → `SODIWE_EMPLOYER`**, then tell Claude, who runs the connection test again.
+1. **Send Sodiwe the request number** (see "Waiting on Sodiwe"). When they say it's fixed, tell Claude, who runs the connection test again.
 2. **Admin → Holidays → Add or update employees:** paste the full-time employees (email, full name, Sodiwe worker number). A wrong email is fixed automatically when that person picks their name at first sign-in.
 3. **GitHub secret `SUPABASE_SERVICE_ROLE_KEY`:** from Supabase → Project Settings → API Keys (the secret key). Needed for the real sync.
 4. Then: *Show what would change* → *Sync for real*. From then on it runs every night.
 
 ## Waiting on Sodiwe
 
-- **The employer number for the API.** Every request for the absences gets the answer *"404.01 The given Employer is not found"*. Tried in the `Employer` header: `29717`, `029717` and `1518-029717` (the number on the payslips). Sodiwe's manual asks for the employer's *external number* in Prisma. Ask Sodiwe:
-  - which exact value goes in the `Employer` header for PARADISE CITY BV;
-  - whether the certificate's user ("Sodiwe PARADISECITY") has read rights on that employer.
+- **Access for the certificate's user to employer 29717.** On 18 November Sodiwe confirmed 29717 and said the certificate's user had no access to Prisma, which they fixed. The test right after (18 November, 16:10 Belgian time) still got *"404.01 The given Employer is not found"*. Sodiwe recorded employer `29717` and user `PARADISECITY` for that request, so our side sends the right values. Request number for Sodiwe: `726fa5ea-ac82-4439-a0bb-3eae2687306b`.
 - Still open from your first email: are your employees' holidays registered in the absence calendar in Prisma? (Only those come through the API.)
 
 ## Open questions for you
@@ -59,6 +57,7 @@
 ## Good to know
 
 - Claude can't test the Sodiwe connection from its own cloud environment: that environment's network proxy can't pass a client certificate on. GitHub's servers can, which is why the test runs there.
+- Until Sodiwe's access works and `SUPABASE_SERVICE_ROLE_KEY` is added, the nightly Sodiwe job fails, and GitHub may email you about it. You can ignore those emails for now.
 - GitHub starts the "nightly" job late when it's busy (lately around midday instead of 05:15). That's normal for GitHub's schedules and only means the planner updates a bit later in the day.
 - Free Supabase projects pause after about a week without activity (this happened once already). Once the Sodiwe sync runs every day, it keeps the project awake; the Pro plan avoids it entirely.
 
@@ -75,5 +74,7 @@
 | #9 | Three groups: full-time employee, freelancers and other, French and Austrian team |
 | #10 | The Sodiwe sync shows Sodiwe's own reason when it refuses a request |
 | #11 | Status: the certificate works, the employer number isn't recognised yet |
+| #12 | The Sodiwe sync shows the request number, employer and user Sodiwe recorded when it refuses a request |
+| #13 | Status: Sodiwe confirmed 29717; waiting on Sodiwe for the certificate user's access |
 
 Setup details for every step are in the [README](../README.md).
