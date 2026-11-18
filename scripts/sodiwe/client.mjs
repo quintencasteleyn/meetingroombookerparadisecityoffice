@@ -19,7 +19,7 @@ const DONE = new Set(['200', '201', '206'])
 const EMPTY = '204' // processed, but nothing found
 const HINTS = {
   '401': 'The certificate has no access to this employer. Ask Sodiwe to give its user rights on the employer number.',
-  '404': 'Sodiwe does not know this employer or worker number. Check SODIWE_EMPLOYER.',
+  '404': 'Sodiwe does not know this employer number, or the certificate\'s user has no access to it. Check SODIWE_EMPLOYER; if it is right, send Sodiwe the request number above.',
 }
 
 function parseBody(text) {
@@ -39,6 +39,19 @@ function identifierIn(body) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 /**
+ * What Sodiwe support needs to look a request up: its identifier, and the
+ * employer and certificate user Sodiwe recorded for it. Neither is personal
+ * data (no worker numbers), so this can go in the public log.
+ */
+function traceOf(id, result) {
+  const seen = [
+    result?.Employer != null && result.Employer !== '' ? `employer "${result.Employer}"` : '',
+    result?.User ? `user "${result.User}"` : '',
+  ].filter(Boolean)
+  return `Request ${id}${seen.length ? `; Sodiwe recorded ${seen.join(' and ')}` : ''}.`
+}
+
+/**
  * Why Sodiwe refused a request: its status in /Result/{id}. Only the status
  * code and description are used (never the response data), so this can go in
  * the public log.
@@ -55,7 +68,7 @@ async function refusalReason(client, id, { tries = 6, delayMs = 5000 } = {}) {
       const code = String(result.Statuscode ?? '')
       if (!WAITING.has(code)) {
         const hint = HINTS[code.slice(0, 3)] ?? ''
-        return `Its status: ${code} ${result.StatusDescription ?? '(no description)'}. ${hint}`.trim()
+        return `Its status: ${code} ${result.StatusDescription ?? '(no description)'}. ${traceOf(id, result)} ${hint}`.trim()
       }
     }
     if (i < tries - 1) await sleep(delayMs)
@@ -172,7 +185,7 @@ export async function fetchData(client, path, employer, { delayMs = 10_000, maxW
     if (WAITING.has(code)) continue
     if (DONE.has(code) || code === EMPTY) return dataOfResult(result)
     const hint = HINTS[code.slice(0, 3)] ?? ''
-    throw new Error(`Sodiwe could not process the request: ${code} ${result?.StatusDescription ?? ''}. ${hint}`.trim())
+    throw new Error(`Sodiwe could not process the request: ${code} ${result?.StatusDescription ?? ''}. ${traceOf(id, result)} ${hint}`.trim())
   }
   throw new Error(`Sodiwe did not finish the request within ${Math.round(maxWaitMs / 60_000)} minutes (identifier ${id}). Try again later.`)
 }
