@@ -1,6 +1,6 @@
 # Paradise City Office: status
 
-*Last updated: 18 November 2026*
+*Last updated: 19 November 2026*
 
 ## At a glance
 
@@ -30,18 +30,21 @@
 - Received: Paradise City's employer number in Sodiwe is **29717** (Sodiwe confirmed on 18 November that this is the value for the `Employer` header; it's in `SODIWE_EMPLOYER`). Touquet Music Beach is not in Sodiwe (its colleagues choose the French and Austrian team or freelancers and other).
 - Received: Sodiwe's list of employees (8 people at PARADISE CITY BV) with names and worker numbers. It's kept out of this repository because it's personal data; it goes into Admin → Holidays. It has no email addresses, so Claude suggested firstname@paradisecity.be for each, to be checked before pasting.
 - Supabase: all database updates run, up to `20261117000000_three_groups.sql` (17 November); all functions deployed.
-- Connection test on 17 November: Sodiwe **accepts the certificate** from GitHub. So there is no IP restriction, and `link2prisma.sodeco.info/link2prisma.svc` is the right address.
+- Connection test on 17 November: Sodiwe **accepts the certificate** from GitHub, so there is no IP restriction. (That doesn't yet prove `link2prisma.sodeco.info` holds Sodiwe's payroll data: see below.)
 
 ## Waiting on you (in this order)
 
-1. **Send Sodiwe the request number** (see "Waiting on Sodiwe"). When they say it's fixed, tell Claude, who runs the connection test again.
+1. **Reply to Jef (Sodiwe)** so he passes the problem on to the software supplier (see "Waiting on Sodiwe"). When they say it's fixed, or give another address, tell Claude, who runs the connection test again.
 2. **Admin → Holidays → Add or update employees:** paste the full-time employees (email, full name, Sodiwe worker number). A wrong email is fixed automatically when that person picks their name at first sign-in.
 3. **GitHub secret `SUPABASE_SERVICE_ROLE_KEY`:** from Supabase → Project Settings → API Keys (the secret key). Needed for the real sync.
 4. Then: *Show what would change* → *Sync for real*. From then on it runs every night.
 
 ## Waiting on Sodiwe
 
-- **Access for the certificate's user to employer 29717.** On 18 November Sodiwe confirmed 29717 and said the certificate's user had no access to Prisma, which they fixed. The test right after (18 November, 16:10 Belgian time) still got *"404.01 The given Employer is not found"*. Sodiwe recorded employer `29717` and user `PARADISECITY` for that request, so our side sends the right values. Request number for Sodiwe: `726fa5ea-ac82-4439-a0bb-3eae2687306b`.
+- **Why employer 29717 is "not found".** Sodiwe (Jef) confirmed on 19 November that the certificate's user is `PARADISECITY`, the employer is `29717`, and that user has access. The test that morning still got *"404.01 The given Employer is not found"*, with Sodiwe recording exactly employer `29717` and user `PARADISECITY`. Jef offered to pass it on to the software supplier.
+  - Request numbers: `23a1c338-d133-4530-82be-f59ad5ad674c` (19 November, 10:36) and `726fa5ea-ac82-4439-a0bb-3eae2687306b` (18 November, 16:10).
+  - The request: `GET https://link2prisma.sodeco.info/link2prisma.svc/absences/{date}` with the header `Employer: 29717`.
+  - Question for the supplier: is `link2prisma.sodeco.info` the right address for Sodiwe's data, or do Sodiwe's clients use another one? If it's another one, it goes in a new GitHub variable `SODIWE_BASE_URL` (no code change needed).
 - Still open from your first email: are your employees' holidays registered in the absence calendar in Prisma? (Only those come through the API.)
 
 ## Open questions for you
@@ -76,5 +79,6 @@
 | #11 | Status: the certificate works, the employer number isn't recognised yet |
 | #12 | The Sodiwe sync shows the request number, employer and user Sodiwe recorded when it refuses a request |
 | #13 | Status: Sodiwe confirmed 29717; waiting on Sodiwe for the certificate user's access |
+| #14 | Status: still "Employer not found" after Sodiwe's fix; passed on to the software supplier |
 
 Setup details for every step are in the [README](../README.md).
