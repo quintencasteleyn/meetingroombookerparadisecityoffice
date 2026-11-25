@@ -254,6 +254,7 @@ GitHub → **Actions** → **Sync Sodiwe absences** → **Run workflow** lets yo
 | *Sodiwe answered 503 … upstream connect error* | Something between GitHub and Sodiwe blocked the connection (for example a proxy that can't pass a client certificate on). Ask Sodiwe whether they only allow certain IP addresses. |
 | *401 … no access to this employer* | The certificate's user has no rights on that employer number. Ask Sodiwe to add them. |
 | *404 The given Employer is not found* | Sodiwe doesn't know the value in `SODIWE_EMPLOYER`, or the certificate isn't linked to that employer. Ask Sodiwe for the exact value of the `Employer` header (the employer's external number in Prisma). |
+| *port 443 … doesn't answer* | A firewall at Sodiwe blocks the address the request comes from. GitHub's servers have no fixed address; ask Sodiwe which addresses they accept. |
 | *did not finish the request within 15 minutes* | Sodiwe's queue was slow. The next night's run tries again, or start it again by hand. |
 
 ---
