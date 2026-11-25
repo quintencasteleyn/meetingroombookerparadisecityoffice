@@ -212,7 +212,7 @@ The days off of full-time employees come from Sodiwe's **Link2Prisma** API ([doc
 
 - “The connection on our side is ready. Please create the certificate.” They send a certificate file (`.pfx` or `.p12`), sometimes with a **password**. Ask for read access to the absences of your employer number(s).
 - Whether the API **only accepts certain IP addresses**. GitHub's servers don't have a fixed IP address, so if Sodiwe requires one, the sync has to run from a machine with a fixed address instead.
-- Whether `https://link2prisma.sodeco.info/link2prisma.svc` (the address in the manual) is also the address for live data.
+- *(Answered: Sodiwe's API address is `https://docs.sodiwe.be/link2prisma/link2prisma.svc`, not the address in the manual. The sync uses it by default.)*
 - Whether your employees' holidays are registered in the **absence calendar** in Prisma. Only those come through the API.
 
 **Put the certificate in GitHub:**
@@ -233,7 +233,7 @@ The days off of full-time employees come from Sodiwe's **Link2Prisma** API ([doc
    | Name | Value |
    |---|---|
    | `SODIWE_EMPLOYER` | your employer number in Prisma (the *external number* of the employer). More than one: separate with commas |
-   | `SODIWE_BASE_URL` | *(only if Sodiwe gives you another address)* default: `https://link2prisma.sodeco.info/link2prisma.svc` |
+   | `SODIWE_BASE_URL` | *(only if Sodiwe gives you another address)* default: `https://docs.sodiwe.be/link2prisma/link2prisma.svc` |
    | `SODIWE_EXCLUDE_CODES` | *(optional)* absence codes that should never show, e.g. the sick-leave codes, separated by commas |
    | `SODIWE_ABSENCE_CODES` | *(optional)* if set, **only** these absence codes show |
 

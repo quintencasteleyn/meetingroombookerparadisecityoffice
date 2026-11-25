@@ -25,7 +25,7 @@
 //   SODIWE_CERT_PFX_BASE64      secret: the certificate from Sodiwe (.pfx/.p12), base64-encoded
 //   SODIWE_CERT_PASSWORD        secret (optional): the certificate's password, if it has one
 //   SODIWE_EMPLOYER             variable: employer number(s) in Prisma, comma-separated
-//   SODIWE_BASE_URL             variable (optional): defaults to Sodiwe's Link2Prisma address
+//   SODIWE_BASE_URL             variable (optional): defaults to Sodiwe's Link2Prisma address (docs.sodiwe.be)
 //   SODIWE_ABSENCE_CODES        variable (optional): only these absence codes count (comma-separated)
 //   SODIWE_EXCLUDE_CODES        variable (optional): these absence codes never count (e.g. sick leave)
 
@@ -38,7 +38,10 @@ import { addDays, isWorkingDay } from '../supabase/functions/_shared/holidays.ts
 const DAYS_BACK = 31
 const DAYS_AHEAD = 400
 // From the Link2Prisma manual ("each social secretariat has a separate URI").
-const DEFAULT_BASE_URL = 'https://link2prisma.sodeco.info/link2prisma.svc'
+// Sodiwe's own Link2Prisma server (confirmed by Sodiwe on 25 November 2026). The
+// address in the Link2Prisma manual, link2prisma.sodeco.info, accepts the
+// certificate but doesn't know Sodiwe's employers.
+const DEFAULT_BASE_URL = 'https://docs.sodiwe.be/link2prisma/link2prisma.svc'
 
 const args = process.argv.slice(2)
 const testOnly = args.includes('--test')
