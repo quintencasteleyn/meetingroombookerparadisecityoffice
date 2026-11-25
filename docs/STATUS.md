@@ -1,6 +1,6 @@
 # Paradise City Office: status
 
-*Last updated: 19 November 2026*
+*Last updated: 25 November 2026*
 
 ## At a glance
 
@@ -12,7 +12,7 @@
 | FAQ | ✅ Live, including "How do I change my status? Ask one of the admins" |
 | Meeting rooms | ⏸️ Paused: hidden from the menu, Admin and the FAQ. Bookings are kept |
 | Weekly "who's off" email | ⏸️ Built and tested, but the Friday schedule is **off** until your GO |
-| Sodiwe connection | 🟡 The certificate works (valid until 30 May 2036). **The certificate's user can't see employer 29717 yet:** waiting on Sodiwe (see below) |
+| Sodiwe connection | 🟡 Sodiwe gave its own API address. **Its server doesn't answer GitHub's servers** (probably an IP filter): waiting on Sodiwe (see below) |
 
 ## Done
 
@@ -30,21 +30,21 @@
 - Received: Paradise City's employer number in Sodiwe is **29717** (Sodiwe confirmed on 18 November that this is the value for the `Employer` header; it's in `SODIWE_EMPLOYER`). Touquet Music Beach is not in Sodiwe (its colleagues choose the French and Austrian team or freelancers and other).
 - Received: Sodiwe's list of employees (8 people at PARADISE CITY BV) with names and worker numbers. It's kept out of this repository because it's personal data; it goes into Admin → Holidays. It has no email addresses, so Claude suggested firstname@paradisecity.be for each, to be checked before pasting.
 - Supabase: all database updates run, up to `20261117000000_three_groups.sql` (17 November); all functions deployed.
-- Connection test on 17 November: Sodiwe **accepts the certificate** from GitHub, so there is no IP restriction. (That doesn't yet prove `link2prisma.sodeco.info` holds Sodiwe's payroll data: see below.)
+- Connection tests 17–24 November on `link2prisma.sodeco.info` (the address in the manual): the certificate was accepted, but every request got "404.01 The given Employer is not found". On 25 November Sodiwe gave its own address, `docs.sodiwe.be`; the sync uses it now.
+- The connection test now shows step by step where a connection gets stuck (name lookup, port, secure handshake) and from which IP address it came.
 
 ## Waiting on you (in this order)
 
-1. **Reply to Jef (Sodiwe)** so he passes the problem on to the software supplier (see "Waiting on Sodiwe"). When they say it's fixed, or give another address, tell Claude, who runs the connection test again.
+1. **Ask Jef (Sodiwe) about IP addresses** (see "Waiting on Sodiwe"). Also open `https://docs.sodiwe.be/link2prisma/link2prisma.svc` in your browser at the office and tell Claude what you see: if it loads (or asks for a certificate), your office's address gets through.
 2. **Admin → Holidays → Add or update employees:** paste the full-time employees (email, full name, Sodiwe worker number). A wrong email is fixed automatically when that person picks their name at first sign-in.
 3. **GitHub secret `SUPABASE_SERVICE_ROLE_KEY`:** from Supabase → Project Settings → API Keys (the secret key). Needed for the real sync.
 4. Then: *Show what would change* → *Sync for real*. From then on it runs every night.
 
 ## Waiting on Sodiwe
 
-- **Why employer 29717 is "not found".** Sodiwe (Jef) confirmed on 19 November that the certificate's user is `PARADISECITY`, the employer is `29717`, and that user has access. The test that morning still got *"404.01 The given Employer is not found"*, with Sodiwe recording exactly employer `29717` and user `PARADISECITY`. Jef offered to pass it on to the software supplier.
-  - Request numbers: `23a1c338-d133-4530-82be-f59ad5ad674c` (19 November, 10:36) and `726fa5ea-ac82-4439-a0bb-3eae2687306b` (18 November, 16:10).
-  - The request: `GET https://link2prisma.sodeco.info/link2prisma.svc/absences/{date}` with the header `Employer: 29717`.
-  - Question for the supplier: is `link2prisma.sodeco.info` the right address for Sodiwe's data, or do Sodiwe's clients use another one? If it's another one, it goes in a new GitHub variable `SODIWE_BASE_URL` (no code change needed).
+- **Does Sodiwe's server only accept certain IP addresses?** On 25 November Sodiwe gave its own API address: `https://docs.sodiwe.be/link2prisma/link2prisma.svc` (the address in the manual, `link2prisma.sodeco.info`, doesn't know Sodiwe's employers, which explains the earlier "Employer not found"). The supplier checked the account and said everything is in order. But from GitHub, port 443 of `docs.sodiwe.be` (212.123.15.73) gives **no answer at all**, before the certificate even comes into play. That is almost always a firewall that only lets certain IP addresses in.
+  - GitHub's servers have no fixed IP address (on 25 November at 12:08 it was 135.119.38.58).
+  - If Sodiwe only accepts fixed addresses, the sync has to run from a machine with a fixed IP address (see "Open questions").
 - Still open from your first email: are your employees' holidays registered in the absence calendar in Prisma? (Only those come through the API.)
 
 ## Open questions for you
@@ -55,7 +55,8 @@
    - Recipients: everyone in BCC, or a group address?
    - Day and time: Friday afternoon about next week?
    - Then add `CRON_SECRET` in Supabase and GitHub (README step 9).
-3. **Repository visibility:** the code is public. That's fine for the code (no secrets are in it, and the logs only show counts). Make it private only if you prefer; GitHub Pages on a private repository needs a paid GitHub plan.
+3. **If Sodiwe only accepts fixed IP addresses:** the sync then runs from a machine with a fixed address, and Sodiwe allows that address. Options: a computer at the office that's always on (if your office internet has a fixed IP), or a small cloud server (about €5 a month). Claude sets it up once you choose.
+4. **Repository visibility:** the code is public. That's fine for the code (no secrets are in it, and the logs only show counts). Make it private only if you prefer; GitHub Pages on a private repository needs a paid GitHub plan.
 
 ## Good to know
 
@@ -80,5 +81,6 @@
 | #12 | The Sodiwe sync shows the request number, employer and user Sodiwe recorded when it refuses a request |
 | #13 | Status: Sodiwe confirmed 29717; waiting on Sodiwe for the certificate user's access |
 | #14 | Status: still "Employer not found" after Sodiwe's fix; passed on to the software supplier |
+| #15 | Sodiwe's own address (docs.sodiwe.be); the connection test shows where a connection gets stuck |
 
 Setup details for every step are in the [README](../README.md).

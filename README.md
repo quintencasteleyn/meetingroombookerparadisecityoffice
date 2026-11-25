@@ -212,7 +212,7 @@ The days off of full-time employees come from Sodiwe's **Link2Prisma** API ([doc
 
 - “The connection on our side is ready. Please create the certificate.” They send a certificate file (`.pfx` or `.p12`), sometimes with a **password**. Ask for read access to the absences of your employer number(s).
 - Whether the API **only accepts certain IP addresses**. GitHub's servers don't have a fixed IP address, so if Sodiwe requires one, the sync has to run from a machine with a fixed address instead.
-- Whether `https://link2prisma.sodeco.info/link2prisma.svc` (the address in the manual) is also the address for live data.
+- *(Answered: Sodiwe's API address is `https://docs.sodiwe.be/link2prisma/link2prisma.svc`, not the address in the manual. The sync uses it by default.)*
 - Whether your employees' holidays are registered in the **absence calendar** in Prisma. Only those come through the API.
 
 **Put the certificate in GitHub:**
@@ -233,7 +233,7 @@ The days off of full-time employees come from Sodiwe's **Link2Prisma** API ([doc
    | Name | Value |
    |---|---|
    | `SODIWE_EMPLOYER` | your employer number in Prisma (the *external number* of the employer). More than one: separate with commas |
-   | `SODIWE_BASE_URL` | *(only if Sodiwe gives you another address)* default: `https://link2prisma.sodeco.info/link2prisma.svc` |
+   | `SODIWE_BASE_URL` | *(only if Sodiwe gives you another address)* default: `https://docs.sodiwe.be/link2prisma/link2prisma.svc` |
    | `SODIWE_EXCLUDE_CODES` | *(optional)* absence codes that should never show, e.g. the sick-leave codes, separated by commas |
    | `SODIWE_ABSENCE_CODES` | *(optional)* if set, **only** these absence codes show |
 
@@ -254,6 +254,7 @@ GitHub → **Actions** → **Sync Sodiwe absences** → **Run workflow** lets yo
 | *Sodiwe answered 503 … upstream connect error* | Something between GitHub and Sodiwe blocked the connection (for example a proxy that can't pass a client certificate on). Ask Sodiwe whether they only allow certain IP addresses. |
 | *401 … no access to this employer* | The certificate's user has no rights on that employer number. Ask Sodiwe to add them. |
 | *404 The given Employer is not found* | Sodiwe doesn't know the value in `SODIWE_EMPLOYER`, or the certificate isn't linked to that employer. Ask Sodiwe for the exact value of the `Employer` header (the employer's external number in Prisma). |
+| *port 443 … doesn't answer* | A firewall at Sodiwe blocks the address the request comes from. GitHub's servers have no fixed address; ask Sodiwe which addresses they accept. |
 | *did not finish the request within 15 minutes* | Sodiwe's queue was slow. The next night's run tries again, or start it again by hand. |
 
 ---
