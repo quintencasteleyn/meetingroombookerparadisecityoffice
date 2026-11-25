@@ -9,7 +9,10 @@
 //   * Requests about an employer carry the header "Employer" (its external
 //     number); /Result takes no header.
 
+import dns from 'node:dns/promises'
 import https from 'node:https'
+import net from 'node:net'
+import tls from 'node:tls'
 
 const TIMEOUT_MS = 60_000
 
@@ -83,6 +86,81 @@ function explain(err) {
       ? ' Is SODIWE_CERT_PASSWORD right, and is SODIWE_CERT_PFX_BASE64 the whole .pfx file in base64?'
       : ''
   return new Error(`Could not reach Sodiwe: ${err.message}.${hint}`)
+}
+
+/** Opens a socket with `open` and waits for `event`; destroys it either way. */
+function trySocket(open, event, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const socket = open()
+    const done = (fn, value) => {
+      socket.destroy()
+      fn(value)
+    }
+    socket.setTimeout(timeoutMs, () => done(reject, new Error(`no answer within ${timeoutMs / 1000} seconds`)))
+    socket.once(event, () => done(resolve))
+    socket.once('error', (err) => done(reject, err))
+  })
+}
+
+/** This machine's public IP address (GitHub's servers change it every run), or null. */
+function publicAddress(timeoutMs) {
+  return new Promise((resolve) => {
+    const req = https.get('https://api.ipify.org', { timeout: timeoutMs }, (res) => {
+      let text = ''
+      res.on('data', (c) => (text += c))
+      res.on('end', () => resolve(/^[0-9a-f.:]+$/i.test(text.trim()) ? text.trim() : null))
+    })
+    req.on('timeout', () => req.destroy())
+    req.on('error', () => resolve(null))
+  })
+}
+
+/**
+ * Where a connection to Sodiwe's server gets stuck, step by step: the name
+ * lookup, the port, the secure handshake (without the certificate). Returns
+ * one line per step; `ok` is false at the first step that fails. Only public
+ * addresses are shown, so this can go in the public log.
+ */
+export async function checkReachable(baseUrl, { timeoutMs = 20_000 } = {}) {
+  const { hostname, port } = new URL(baseUrl)
+  const portNumber = Number(port) || 443
+  const lines = []
+  const from = await publicAddress(5000)
+  lines.push(`Connecting from ${from ?? 'an unknown address'} at ${new Date().toISOString()} (UTC).`)
+
+  let address
+  try {
+    ;({ address } = await dns.lookup(hostname))
+    lines.push(`OK: ${hostname} is ${address}.`)
+  } catch (err) {
+    lines.push(`FAILED: could not look up ${hostname}: ${err.message}`)
+    return { ok: false, lines }
+  }
+
+  let started = Date.now()
+  try {
+    await trySocket(() => net.connect({ host: address, port: portNumber }), 'connect', timeoutMs)
+    lines.push(`OK: port ${portNumber} is open (${Date.now() - started} ms).`)
+  } catch (err) {
+    const silent = /no answer within/.test(err.message)
+    lines.push(
+      `FAILED: port ${portNumber} of ${address} ${silent ? "doesn't answer" : 'refuses the connection'} (${err.message}).` +
+        (silent ? ' A firewall probably blocks this address: ask Sodiwe whether their server only accepts certain IP addresses.' : ''),
+    )
+    return { ok: false, lines }
+  }
+
+  started = Date.now()
+  try {
+    await trySocket(() => tls.connect({ host: address, servername: hostname, port: portNumber }), 'secureConnect', timeoutMs)
+    lines.push(`OK: secure connection set up (${Date.now() - started} ms).`)
+  } catch (err) {
+    // Some servers end the handshake when no certificate is offered: that still means they answer.
+    const answered = !/no answer within|ECONNRESET/i.test(err.message)
+    lines.push(`${answered ? 'OK' : 'FAILED'}: secure handshake: ${err.message} (${Date.now() - started} ms).`)
+    if (!answered) return { ok: false, lines }
+  }
+  return { ok: true, lines }
 }
 
 export function createClient({ baseUrl, pfx, passphrase }) {

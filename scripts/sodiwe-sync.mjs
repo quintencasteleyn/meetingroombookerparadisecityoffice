@@ -31,16 +31,16 @@
 
 import { readFileSync } from 'node:fs'
 import { createClient as createSupabase } from '@supabase/supabase-js'
-import { createClient, dataOfResult, fetchData } from './sodiwe/client.mjs'
+import { checkReachable, createClient, dataOfResult, fetchData } from './sodiwe/client.mjs'
 import { parseAbsences, workerKey } from './sodiwe/absences.mjs'
 import { addDays, isWorkingDay } from '../supabase/functions/_shared/holidays.ts'
 
 const DAYS_BACK = 31
 const DAYS_AHEAD = 400
-// From the Link2Prisma manual ("each social secretariat has a separate URI").
-// Sodiwe's own Link2Prisma server (confirmed by Sodiwe on 25 November 2026). The
-// address in the Link2Prisma manual, link2prisma.sodeco.info, accepts the
-// certificate but doesn't know Sodiwe's employers.
+// The Link2Prisma manual says "each social secretariat has a separate URI".
+// This is Sodiwe's (confirmed by Sodiwe on 25 November 2026). The address in
+// the manual, link2prisma.sodeco.info, accepts the certificate but doesn't
+// know Sodiwe's employers.
 const DEFAULT_BASE_URL = 'https://docs.sodiwe.be/link2prisma/link2prisma.svc'
 
 const args = process.argv.slice(2)
@@ -130,6 +130,11 @@ function mergeDays(entries) {
  */
 async function testConnection() {
   const client = sodiweClient()
+
+  // 0. Can we reach Sodiwe's server at all? Shows where it gets stuck if not.
+  const reach = await checkReachable(env.SODIWE_BASE_URL || DEFAULT_BASE_URL)
+  for (const line of reach.lines) console.log(line)
+  if (!reach.ok) throw new Error("Sodiwe's server can't be reached from here (see above).")
 
   // 1. The certificate: ask the status of a made-up request. A refused certificate gives 403;
   //    another 4xx answer (like "not found") means Sodiwe let us in.
